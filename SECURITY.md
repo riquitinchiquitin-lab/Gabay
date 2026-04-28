@@ -14,13 +14,29 @@ We value the security community and are committed to maintaining a secure enviro
 
 ## 🛡️ Our Security Posture
 
-Gabay implements several layers of security to protect users:
+Gabay implements a multi-layered security architecture (Gabay Security Protocol) to ensure data integrity and user privacy:
 
-- **Input Validation**: All user inputs are sanitized to prevent XSS and injection attacks.
-- **Security Headers**: We use `helmet` to set secure HTTP headers.
-- **Rate Limiting**: To prevent brute-force and DDoS attacks.
-- **Environment Management**: Sensitive keys are managed via environment variables and never exposed to the client-side unless prefixed with `VITE_`.
-- **Identity Protection**: Secure session management with encrypted JWTs and SQLite back-end storage.
+- **Identity & Access Management (IAM)**:
+  - **Google OAuth 2.0**: Secure authentication using Google's identity provider.
+  - **JWT Session Management**: Signed and encrypted JSON Web Tokens (JWT) for stateless, secure session handling.
+  - **Role-Based Access Control (RBAC)**: Strict separation of privileges between `USER` and `ADMIN` roles.
+  - **Developer Login Protection**: A configurable bypass for development that can be strictly disabled via `VITE_DISABLE_DEV_AUTH`.
+
+- **Data Protection & Encryption**:
+  - **AES-256-CBC Field Encryption**: Sensitive data (emails, names, OAuth tokens, and translations) is encrypted at rest within the SQLite database.
+  - **AES-256-GCM Backup Encryption**: Database snapshots are protected with industry-standard authenticated encryption.
+  - **Kernel Secrets**: Cryptographic keys are derived from high-entropy environment variables (`KERNEL_SECRET`, `SESSION_SECRET`).
+
+- **Infrastructure & Network Security**:
+  - **HTTP Security Headers**: Powered by `helmet`, implementing strict Content Security Policy (CSP), HSTS, and Frame Protection.
+  - **Rate Limiting**: Intelligent request throttling to mitigate brute-force and Denial of Service (DoS) attempts.
+  - **Payload Constraints**: Strict limits on request body sizes (15kb) to prevent resource exhaustion.
+
+- **Threat Mitigation**:
+  - **Input Sanitization**: Native protection against Cross-Site Scripting (XSS) via `xss-clean`.
+  - **Parameter Pollution Guard**: Mitigation against HTTP Parameter Pollution (HPP) attacks.
+  - **System Telemetry**: Comprehensive security logging of all critical administrative actions and system events.
+  - **SQLite Local Storage**: Self-contained, local data persistence reducing external attack surface.
 
 ## ⚠️ Third-Party Dependencies
 
