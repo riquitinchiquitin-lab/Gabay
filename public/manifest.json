@@ -1,0 +1,23 @@
+{
+  "name": "Gabay: Tagalog Melody Learner",
+  "short_name": "Gabay",
+  "description": "Learn Tagalog through music and melodies.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#012169",
+  "theme_color": "#012169",
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/philippines-sun/192/192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://picsum.photos/seed/philippines-sun/512/512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
