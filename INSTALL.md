@@ -49,7 +49,7 @@ sudo apt update && sudo apt install -y docker-ce docker-ce-cli containerd.io doc
 Clone the repository and navigate to the project root:
 
 ```bash
-git clone https://github.com/riquitinchiquitin-lab/Gabay.git
+git clone https://github.com/your-repo/gabay.git
 cd gabay
 ```
 
