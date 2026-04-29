@@ -111,6 +111,24 @@ docker compose logs -f
 
 ---
 
+## 📱 5. Mobile Access & AI Protocol
+Gabay is designed for offline-first, rhythmic learning.
+
+### PWA Installation
+For the best experience, install Gabay as a "web app":
+- **iOS**: Open in Safari > Share > **Add to Home Screen**.
+- **Android**: Open in Chrome > Menu > **Install App**.
+
+### 🛫 Airport Learning Mode (Offline)
+Gabay supports full offline capabilities when your device supports the **Web Prompt API**:
+1. **Enable Local AI**: In the dashboard sidebar, if your browser supports it, you will see a "Local Prompt API" option. Toggle this to **ACTIVE**.
+2. **Offline Data**: The Service Worker caches the core UI and your recently synced vocabulary.
+3. **Local Reasoning**: Even without internet, Gabay can generate example sentences and conduct roleplay conversations using your device's native silicon (Tensor/A-series/WebGPU).
+
+**Note**: Voice synthesis (TTS) and Song Exploration still require an active connection for cloud-based processing.
+
+---
+
 ## 📊 6. Monitoring & Limits
 
 - **AI Usage**: Monitor your Gemini API quota in the Google AI Studio dashboard.

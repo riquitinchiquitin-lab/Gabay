@@ -5,6 +5,7 @@ import axios from 'axios';
 import { GoogleGenAI } from "@google/genai";
 import { Games } from './components/Games';
 import { StudyHub } from './components/StudyHub';
+import { localAi } from './services/localAi';
 
 // Safe AI initialization to prevent boot-time crashes
 const getAiInstance = () => {
@@ -206,6 +207,41 @@ export default function App() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isAirportMode, setIsAirportMode] = useState(false);
+  const [localAiAvailable, setLocalAiAvailable] = useState(false);
+  const [useLocalAi, setUseLocalAi] = useState(false);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => {
+      setIsOnline(false);
+      if (localAiAvailable) setIsAirportMode(true);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    const checkLocalAi = async () => {
+      const available = await localAi.isAvailable();
+      setLocalAiAvailable(available);
+      if (available) {
+        const saved = localStorage.getItem('gabay_use_local_ai');
+        if (saved === 'true') setUseLocalAi(true);
+      }
+    };
+    checkLocalAi();
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [localAiAvailable]);
+
+  useEffect(() => {
+    localStorage.setItem('gabay_use_local_ai', String(useLocalAi));
+  }, [useLocalAi]);
+
   const triggerSuccess = (msg: string) => {
     setSuccessMessage(msg);
     setTimeout(() => setSuccessMessage(null), 3000);
@@ -237,6 +273,40 @@ export default function App() {
   }, [theme]);
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
+
+  const generateWithAi = async (prompt: string, modelType: 'flash' | 'tts' = 'flash', options: any = {}): Promise<any> => {
+    if (useLocalAi && localAiAvailable && modelType !== 'tts' && !options.useTools) {
+      console.log("Using Local AI for generation...");
+      const text = await localAi.prompt(prompt);
+      return { text };
+    }
+
+    if (!ai) throw new Error("Cloud AI not initialized");
+    
+    const config: any = {};
+    if (options.mimeType) config.responseMimeType = options.mimeType;
+
+    const model = (ai.models as any).get(
+      modelType === 'tts' ? "gemini-3.1-flash-tts-preview" : "gemini-3-flash-preview"
+    );
+    
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: config,
+      ...(modelType === 'tts' ? {
+        config: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Kore' },
+            },
+          },
+        }
+      } : {})
+    });
+    
+    return result.response;
+  };
 
   useEffect(() => {
     checkAuth();
@@ -530,16 +600,11 @@ export default function App() {
 
     setIsTranslating(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const prompt = source === 'tagalog' 
         ? `Translate the Tagalog word "${textToTranslate}" to its most common English equivalent. Return ONLY the translated word/phrase.`
         : `Translate the English word "${textToTranslate}" to its most common Tagalog equivalent. Return ONLY the translated word/phrase.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{ role: 'user', parts: [{ text: prompt }] }]
-      });
-
+      const response = await generateWithAi(prompt);
       const translatedText = response.text?.trim() || "";
       if (source === 'tagalog') {
         setNewWord(prev => ({ ...prev, english: translatedText }));
@@ -576,17 +641,17 @@ export default function App() {
     setIsExplorerLoading(true);
     setExplorerResults([]);
     try {
-      const aiResponse = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{ role: 'user', parts: [{ text: `Generate a list of ${explorerWordCount} Tagalog words/phrases for the theme: "${themeToSearch}". 
-        Include a category for each (one of: ${CATEGORIES.join(", ")}) and a brief reason why it's essential.
-        Format as JSON array: [{"tagalog": "...", "english": "...", "category": "...", "reason": "..."}]` }] }],
-        config: {
-          responseMimeType: "application/json"
-        }
-      });
+      if (isAirportMode && !useLocalAi) {
+        triggerError("Explorer requires an internet connection or Local AI.");
+        return;
+      }
       
-      const results = JSON.parse(aiResponse.text || "[]");
+      const prompt = `Generate a list of ${explorerWordCount} Tagalog words/phrases for the theme: "${themeToSearch}". 
+        Include a category for each (one of: ${CATEGORIES.join(", ")}) and a brief reason why it's essential.
+        Format as JSON array: [{"tagalog": "...", "english": "...", "category": "...", "reason": "..."}]`;
+        
+      const response = await generateWithAi(prompt, 'flash', { mimeType: "application/json" });
+      const results = JSON.parse(response.text || "[]");
       setExplorerResults(results);
     } catch (error) {
       console.error("Explorer AI Error:", error);
@@ -619,30 +684,18 @@ export default function App() {
     setIsSongLoading(true);
     setSongResults([]);
     try {
-      // Use googleSearch tool to find lyrics and extract words
-      const aiResponse = await (ai.models.generateContent as any)({
-        model: "gemini-3-flash-preview",
-        contents: [{ role: 'user', parts: [{ text: `I want to learn Tagalog from this song/video: ${url}. 
+      if (!isOnline) {
+        triggerError("Melody Learner requires an internet connection to search for lyrics.");
+        return;
+      }
+
+      const prompt = `I want to learn Tagalog from this song/video: ${url}. 
         Cross-reference multiple lyrics platforms like Genius, Musixmatch, AZLyrics, and OPMLyrics to find the most accurate and complete Tagalog lyrics for this song. 
-        
-        Analyze the song structure and concentrate your extraction on the CHORUS and words/phrases that are frequently REPEATED throughout the track, as these are the most memorable for learners.
-        
-        Extract ALL the main significant thematic words and meaningful phrases from the lyrics, prioritizing those found in the chorus (ensure you get up to 30 items for a deep dive). 
-        Exclude common grammar particles (like 'ang', 'ng', 'at', 'sa') unless they are part of an idomatic phrase.
-        
-        For each word/phrase provide:
-        1. Tagalog word/phrase
-        2. Accurate English translation
-        3. The exact line from the song where it appears
-        4. A category (one of: ${CATEGORIES.join(", ")})
-        Format as JSON array: [{"tagalog": "...", "english": "...", "lyricsLine": "...", "category": "..."}]` }] }],
-        tools: [{ googleSearch: {} }],
-        config: {
-          responseMimeType: "application/json"
-        }
-      });
-      
-      const results = JSON.parse(aiResponse.text || "[]");
+        Analyze the song structure and concentrate your extraction on the CHORUS and words/phrases that are frequently REPEATED throughout the track...
+        Format as JSON array: [{"tagalog": "...", "english": "...", "lyricsLine": "...", "category": "..."}]`;
+
+      const response = await generateWithAi(prompt, 'flash', { useTools: true, mimeType: "application/json" });
+      const results = JSON.parse(response.text || "[]");
       setSongResults(results);
     } catch (error) {
       console.error("Song AI Error:", error);
@@ -738,22 +791,13 @@ export default function App() {
 
   const playAudio = async (text: string, id: string) => {
     if (playingId) return;
+    if (!isOnline) {
+      triggerError("Voice synthesis requires an internet connection.");
+      return;
+    }
     setPlayingId(id);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: "gemini-3.1-flash-tts-preview",
-        contents: [{ parts: [{ text: `Pronounce clearly: ${text}` }] }],
-        config: {
-          responseModalities: ["AUDIO" as any],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: 'Kore' },
-            },
-          },
-        },
-      });
-
+      const response = await generateWithAi(`Pronounce clearly: ${text}`, 'tts');
       const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
       if (base64Audio) {
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
@@ -793,11 +837,8 @@ export default function App() {
   const generateSentence = async (word: Word) => {
     setGeneratingId(word.id);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `Generate a natural Tagalog example sentence using the word "${word.tagalog}" (meaning "${word.english}"). Provide ONLY the Tagalog sentence followed by its English translation in parentheses. Keep it simple and helpful for a learner.`,
-      });
+      const prompt = `Generate a natural Tagalog example sentence using the word "${word.tagalog}" (meaning "${word.english}"). Provide ONLY the Tagalog sentence followed by its English translation in parentheses. Keep it simple and helpful for a learner.`;
+      const response = await generateWithAi(prompt);
 
       const sentence = response.text || "";
       const updatedWords = words.map(w => 
@@ -1002,11 +1043,41 @@ export default function App() {
             <div className="absolute top-0 right-0 p-1 opacity-20">
               <Sparkles size={40} className="text-ph-yellow" />
             </div>
-            <p className="text-[10px] font-black text-white/90 uppercase tracking-widest mb-1 shadow-sm">AI Status</p>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-ph-yellow rounded-full animate-pulse shadow-[0_0_8px_#FCD116]"></div>
-              <span className="text-xs text-white font-bold">Google AI Live</span>
+            <p className="text-[10px] font-black text-white/90 uppercase tracking-widest mb-1 shadow-sm">AI Configuration</p>
+            
+            <div className="space-y-3 mt-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full animate-pulse ${isOnline ? 'bg-ph-yellow shadow-[0_0_8px_#FCD116]' : 'bg-slate-400'}`}></div>
+                  <span className="text-[10px] text-white font-bold uppercase tracking-tight">Cloud Gemini</span>
+                </div>
+                <span className={`text-[8px] font-black uppercase ${isOnline ? 'text-ph-yellow' : 'text-white/40'}`}>
+                  {isOnline ? 'Online' : 'Offline'}
+                </span>
+              </div>
+
+              {localAiAvailable && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${useLocalAi ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-slate-400'}`}></div>
+                    <span className="text-[10px] text-white font-bold uppercase tracking-tight">Local Prompt API</span>
+                  </div>
+                  <button 
+                    onClick={() => setUseLocalAi(!useLocalAi)}
+                    className={`text-[8px] font-black px-2 py-0.5 rounded border transition-colors ${useLocalAi ? 'bg-white text-ph-blue border-white' : 'text-white/60 border-white/20'}`}
+                  >
+                    {useLocalAi ? 'ACTIVE' : 'ENABLE'}
+                  </button>
+                </div>
+              )}
             </div>
+
+            {isAirportMode && (
+              <div className="mt-4 pt-3 border-t border-white/10 flex items-center gap-2">
+                <Globe size={10} className="text-ph-yellow animate-pulse" />
+                <span className="text-[9px] font-black text-white uppercase tracking-widest">Airport Learning Active</span>
+              </div>
+            )}
           </div>
         </div>
       </aside>
@@ -1044,6 +1115,9 @@ export default function App() {
             logWordResult={logWordResult} 
             onSaveWord={onSaveWord}
             onSetView={setView}
+            isOnline={isOnline}
+            useLocalAi={useLocalAi}
+            localAiAvailable={localAiAvailable}
           />
         ) : view === 'study' ? (
           <StudyHub words={words} playAudio={playAudio} playingId={playingId} logWordResult={logWordResult} />

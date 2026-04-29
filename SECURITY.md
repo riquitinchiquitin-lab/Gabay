@@ -41,3 +41,10 @@ Gabay implements a multi-layered security architecture (Gabay Security Protocol)
 ## ⚠️ Third-Party Dependencies
 
 We regularly audit our dependencies for known vulnerabilities. We recommend keeping your local installation up to date with the latest security patches from this repository.
+
+## 🛫 On-Device AI Privacy
+Gabay supports "Airport Learning Mode" using the experimental **Web Prompt API**.
+
+- **On-Device Processing**: When Local AI is enabled, your learning data and prompts are processed directly on your device's hardware (e.g., Google Chrome's built-in Gemini Nano).
+- **Privacy Benefit**: Local roleplay and sentence generation do not send your prompt text to the cloud when this mode is active.
+- **Selective Cloud Fallback**: Features requiring internet (like YouTube integration or TTS) will clearly notify you when they need to reach the server.

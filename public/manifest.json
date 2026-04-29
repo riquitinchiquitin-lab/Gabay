@@ -1,9 +1,10 @@
 {
-  "name": "Gabay: Tagalog Melody Learner",
+  "name": "Gabay: Tagalog Learning Protocol",
   "short_name": "Gabay",
-  "description": "Learn Tagalog through music and melodies.",
-  "start_url": "/",
+  "description": "Rhythmic Tagalog learning helper with music and AI insights.",
+  "start_url": ".",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#012169",
   "theme_color": "#012169",
   "icons": [
@@ -18,6 +19,19 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "music", "lifestyle"],
+  "shortcuts": [
+    {
+      "name": "Study Hub",
+      "url": "/?tab=study",
+      "icons": [{ "src": "https://picsum.photos/seed/study/96/96", "sizes": "96x96" }]
+    },
+    {
+      "name": "Games",
+      "url": "/?tab=games",
+      "icons": [{ "src": "https://picsum.photos/seed/games/96/96", "sizes": "96x96" }]
     }
   ]
 }

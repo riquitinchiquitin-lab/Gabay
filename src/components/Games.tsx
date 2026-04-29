@@ -4,6 +4,7 @@ import { Gamepad2, Brain, MessageSquare, RotateCcw, Send, Sparkles, X, Trophy, M
 import { GoogleGenAI } from "@google/genai";
 import axios from 'axios';
 import { PhilippineSun } from '../App';
+import { localAi } from '../services/localAi';
 
 // Safe AI initialization for Games component
 const getAiInstance = () => {
@@ -32,9 +33,22 @@ interface GamesProps {
   logWordResult: (wordId: string, correct: boolean) => Promise<void>;
   onSaveWord: (wordData: { tagalog: string, english: string, category: string }) => Promise<void>;
   onSetView: (view: any) => void;
+  isOnline: boolean;
+  useLocalAi: boolean;
+  localAiAvailable: boolean;
 }
 
-export const Games: React.FC<GamesProps> = ({ words, playAudio, playingId, logWordResult, onSaveWord, onSetView }) => {
+export const Games: React.FC<GamesProps> = ({ 
+  words, 
+  playAudio, 
+  playingId, 
+  logWordResult, 
+  onSaveWord, 
+  onSetView,
+  isOnline,
+  useLocalAi,
+  localAiAvailable
+}) => {
   const [activeGame, setActiveGame] = useState<'none' | 'matching' | 'quiz' | 'roleplay' | 'expedition'>('none');
   const [gameLimit, setGameLimit] = useState<number>(10);
 
@@ -185,9 +199,25 @@ export const Games: React.FC<GamesProps> = ({ words, playAudio, playingId, logWo
         ) : activeGame === 'quiz' ? (
           <QuizGame words={words} playAudio={playAudio} playingId={playingId} logWordResult={logWordResult} onSetView={onSetView} limit={gameLimit} />
         ) : activeGame === 'roleplay' ? (
-          <RoleplayGame words={words} onSaveWord={onSaveWord} />
+          <RoleplayGame 
+            words={words} 
+            onSaveWord={onSaveWord} 
+            isOnline={isOnline} 
+            useLocalAi={useLocalAi} 
+            localAiAvailable={localAiAvailable} 
+          />
         ) : (
-          <ExpeditionGame userWords={words} logWordResult={logWordResult} onSaveWord={onSaveWord} limit={gameLimit} playAudio={playAudio} playingId={playingId} />
+          <ExpeditionGame 
+            userWords={words} 
+            logWordResult={logWordResult} 
+            onSaveWord={onSaveWord} 
+            limit={gameLimit} 
+            playAudio={playAudio} 
+            playingId={playingId}
+            isOnline={isOnline}
+            useLocalAi={useLocalAi}
+            localAiAvailable={localAiAvailable}
+          />
         )}
       </div>
     </div>
@@ -572,7 +602,13 @@ const MatchingGame: React.FC<{
   );
 };
 
-const RoleplayGame: React.FC<{ words: Word[], onSaveWord: (wordData: { tagalog: string, english: string, category: string }) => Promise<void> }> = ({ words, onSaveWord }) => {
+const RoleplayGame: React.FC<{ 
+  words: Word[], 
+  onSaveWord: (wordData: { tagalog: string, english: string, category: string }) => Promise<void>,
+  isOnline: boolean,
+  useLocalAi: boolean,
+  localAiAvailable: boolean
+}> = ({ words, onSaveWord, isOnline, useLocalAi, localAiAvailable }) => {
   const [messages, setMessages] = useState<{ role: 'user' | 'model', text: string }[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -592,22 +628,55 @@ const RoleplayGame: React.FC<{ words: Word[], onSaveWord: (wordData: { tagalog: 
     ]);
   }, []);
 
+  const generateWithAi = async (prompt: string, options: any = {}): Promise<any> => {
+    if (useLocalAi && localAiAvailable && !options.useTools) {
+      console.log("Using Local AI in Games...");
+      const text = await localAi.prompt(prompt);
+      return { text: () => text, textValue: text };
+    }
+
+    if (!ai) throw new Error("Cloud AI not initialized");
+    
+    const config: any = {};
+    if (options.mimeType) config.responseMimeType = options.mimeType;
+
+    const model = (ai.models as any).get("gemini-3-flash-preview");
+
+    const contents: any[] = [];
+    if (options.history) {
+       options.history.forEach((m: any) => {
+         contents.push({ role: m.role, parts: [{ text: m.text }] });
+       });
+    }
+    contents.push({ role: 'user', parts: [{ text: prompt }] });
+    
+    const result = await model.generateContent({
+      contents,
+      generationConfig: config,
+      systemInstruction: options.systemInstruction
+    });
+    
+    return { 
+      text: () => result.response.text(),
+      textValue: result.response.text()
+    };
+  };
+
   const handleExtractWords = async () => {
     if (messages.length < 2) return;
     setIsExtracting(true);
     try {
       const history = messages.map(m => `${m.role}: ${m.text}`).join("\n");
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{ role: 'user', parts: [{ text: `Based on this conversation, extract up to 5 useful Tagalog words or phrases that were either used or would be helpful in this context. 
+      const prompt = `Based on this conversation, extract up to 5 useful Tagalog words or phrases that were either used or would be helpful in this context. 
         Exclude words already in this list: ${words.map(w => w.tagalog).join(", ")}.
-        Format as JSON array: [{"tagalog": "...", "english": "..."}]` }] }],
-        config: {
-          systemInstruction: `Chat History:\n${history}`,
-          responseMimeType: "application/json"
-        }
+        Format as JSON array: [{"tagalog": "...", "english": "..."}]`;
+        
+      const response = await generateWithAi(prompt, { 
+        systemInstruction: `Chat History:\n${history}`,
+        mimeType: "application/json"
       });
-      const results = JSON.parse(response.text || "[]");
+      
+      const results = JSON.parse(response.textValue || "[]");
       setExtractedWords(results);
     } catch (err) {
       console.error("Extraction error:", err);
@@ -620,6 +689,11 @@ const RoleplayGame: React.FC<{ words: Word[], onSaveWord: (wordData: { tagalog: 
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
+    if (!isOnline && !useLocalAi) {
+      setMessages(prev => [...prev, { role: 'model', text: "I need an internet connection or Local AI to chat with you! (Switch to Airport Mode in settings)" }]);
+      return;
+    }
+
     const userMessage = { role: 'user' as const, text: input };
     setMessages(prev => [...prev, userMessage]);
     setInput("");
@@ -627,26 +701,21 @@ const RoleplayGame: React.FC<{ words: Word[], onSaveWord: (wordData: { tagalog: 
 
     try {
       const vocabularyContext = words.map(w => `${w.tagalog} (${w.english})`).join(", ");
-      
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [
-          ...messages.map(m => ({ role: m.role, parts: [{ text: m.text }] })),
-          { role: 'user', parts: [{ text: input }] }
-        ],
-        config: {
-          systemInstruction: `You are a friendly but firm store owner (Tindera) in a Filipino Sari-Sari store. 
+      const systemInstruction = `You are a friendly but firm store owner (Tindera) in a Filipino Sari-Sari store. 
           Your goal is to practice Tagalog with the user.
           Current Vocabulary Context of the user: [${vocabularyContext}].
           Rule: Respond in Tagalog primarily, but provide an English translation in parentheses for complex phrases.
           Be vibrant, use words like 'Sige na', 'Kuya/Ate', 'Heto pa'.
           If the user tries to bargain, act like you are thinking about it. 
           Encourage them to use Tagalog words from their vocabulary list where appropriate.
-          Keep responses concise (1-2 sentences).`
-        }
+          Keep responses concise (1-2 sentences).`;
+
+      const response = await generateWithAi(input, { 
+        history: messages,
+        systemInstruction
       });
 
-      setMessages(prev => [...prev, { role: 'model', text: response.text || "Sensya na, I didn't get that." }]);
+      setMessages(prev => [...prev, { role: 'model', text: response.textValue || "Sensya na, I didn't get that." }]);
     } catch (err) {
       console.error("AI Error:", err);
       setMessages(prev => [...prev, { role: 'model', text: "(Offline) Pasensya na, the tindera is busy! Try again." }]);
@@ -997,8 +1066,11 @@ const ExpeditionGame: React.FC<{
   onSaveWord: (wordData: { tagalog: string, english: string, category: string }) => Promise<void>,
   limit: number,
   playAudio: (text: string, id: string) => Promise<void>,
-  playingId: string | null
-}> = ({ userWords, logWordResult, onSaveWord, limit, playAudio, playingId }) => {
+  playingId: string | null,
+  isOnline: boolean,
+  useLocalAi: boolean,
+  localAiAvailable: boolean
+}> = ({ userWords, logWordResult, onSaveWord, limit, playAudio, playingId, isOnline, useLocalAi, localAiAvailable }) => {
   const [selectedLocation, setSelectedLocation] = useState<typeof LOCATIONS[0] | null>(null);
   const [guideMessage, setGuideMessage] = useState<string>("");
   const [isTalking, setIsTalking] = useState(false);
@@ -1050,19 +1122,42 @@ const ExpeditionGame: React.FC<{
       }, 100);
     }
     
+    const generateWithAi = async (prompt: string, options: any = {}): Promise<any> => {
+      if (useLocalAi && localAiAvailable && !options.useTools) {
+        console.log("Using Local AI in Expedition...");
+        const text = await localAi.prompt(prompt);
+        return { text: () => text, textValue: text };
+      }
+
+      if (!ai) throw new Error("Cloud AI not initialized");
+      
+      const config: any = {};
+      if (options.mimeType) config.responseMimeType = options.mimeType;
+
+      const model = (ai.models as any).get("gemini-3-flash-preview");
+      
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: config,
+        systemInstruction: options.systemInstruction
+      });
+      
+      return { 
+        text: () => result.response.text(),
+        textValue: result.response.text()
+      };
+    };
+    
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{ role: 'user', parts: [{ text: `I have arrived in ${loc.name}. Greet me and ask a themed question!` }] }],
-        config: {
-          systemInstruction: `You are a local tour guide in ${loc.name}, Philippines. 
+      const prompt = `I have arrived in ${loc.name}. Greet me and ask a themed question!`;
+      const systemInstruction = `You are a local tour guide in ${loc.name}, Philippines. 
           Theme: ${loc.theme}.
           Objective: Welcome the traveler and challenge them with one quick question about their vocabulary in the context of this location.
           Current user words: ${userWords.map(w => w.tagalog).join(", ")}.
-          Keep it very short (max 2 sentences). Use Tagalog mostly with English in (parentheses).`
-        }
-      });
-      setGuideMessage(response.text || `Mabuhay! Welcome to ${loc.name}.`);
+          Keep it very short (max 2 sentences). Use Tagalog mostly with English in (parentheses).`;
+
+      const response = await generateWithAi(prompt, { systemInstruction });
+      setGuideMessage(response.textValue || `Mabuhay! Welcome to ${loc.name}.`);
     } catch (err) {
       setGuideMessage(`Mabuhay! Welcome to ${loc.name}. Ready to explore the ${loc.theme}?`);
     } finally {

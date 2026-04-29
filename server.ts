@@ -206,8 +206,12 @@ app.use((req: any, res, next) => {
     try {
       const decoded: any = jwt.verify(token, JWT_SECRET);
       req.user = decoded;
-    } catch (err) {
-      console.error("JWT Verify Error:", err, "Token preview:", token.substring(0, 10) + "...");
+    } catch (err: any) {
+      if (err.name === 'TokenExpiredError') {
+        console.warn("JWT Expired. User will need to re-authenticate.");
+      } else {
+        console.error("JWT Verify Error:", err.message, "Token preview:", token.substring(0, 10) + "...");
+      }
     }
   }
   next();
@@ -307,7 +311,7 @@ app.get(["/auth/callback", "/auth/callback/"], async (req, res) => {
       role: user.role, 
       name: user.name, 
       email: user.email 
-    }, JWT_SECRET, { expiresIn: '24h' });
+    }, JWT_SECRET, { expiresIn: '7d' });
 
     res.send(`
       <html>
@@ -368,7 +372,7 @@ app.post("/api/auth/dev-login", async (req, res, next) => {
       role: user.role, 
       name: "Developer Admin", 
       email: adminEmail 
-    }, JWT_SECRET, { expiresIn: '24h' });
+    }, JWT_SECRET, { expiresIn: '7d' });
 
     res.json({ user, token });
   } catch (error) {
