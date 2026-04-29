@@ -11,5 +11,13 @@ services:
       - SESSION_SECRET=${SESSION_SECRET}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - APP_URL=${APP_URL}
+      - CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
     volumes:
       - ./postgress.db:/app/postgress.db
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: always
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
