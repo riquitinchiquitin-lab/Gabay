@@ -885,28 +885,30 @@ export default function App() {
           <span>{isLoggingIn ? 'Signing in...' : 'Continue with Google'}</span>
         </button>
 
-        <button 
-          onClick={async () => {
-            if (isLoggingIn) return;
-            setIsLoggingIn(true);
-            try {
-              const resp = await axios.post('/api/auth/dev-login');
-              const { user: userData, token: userToken } = resp.data;
-              localStorage.setItem('gabay_auth_token', userToken);
-              axios.defaults.headers.common['Authorization'] = `Bearer ${userToken}`;
-              setUser(userData);
-            } catch (err) {
-              triggerError("Dev login failed.");
-            } finally {
-              setIsLoggingIn(false);
-            }
-          }}
-          disabled={isLoggingIn}
-          className="w-full flex items-center justify-center gap-2 text-app-muted hover:text-ph-blue text-sm font-bold p-2 transition-colors disabled:opacity-50"
-        >
-          <ShieldCheck size={16} />
-          <span>Enter Developer Mode</span>
-        </button>
+        {import.meta.env.VITE_DISABLE_DEV_AUTH !== 'true' && (
+          <button 
+            onClick={async () => {
+              if (isLoggingIn) return;
+              setIsLoggingIn(true);
+              try {
+                const resp = await axios.post('/api/auth/dev-login');
+                const { user: userData, token: userToken } = resp.data;
+                localStorage.setItem('gabay_auth_token', userToken);
+                axios.defaults.headers.common['Authorization'] = `Bearer ${userToken}`;
+                setUser(userData);
+              } catch (err) {
+                triggerError("Dev login failed.");
+              } finally {
+                setIsLoggingIn(false);
+              }
+            }}
+            disabled={isLoggingIn}
+            className="w-full flex items-center justify-center gap-2 text-app-muted hover:text-ph-blue text-sm font-bold p-2 transition-colors disabled:opacity-50"
+          >
+            <ShieldCheck size={16} />
+            <span>Enter Developer Mode</span>
+          </button>
+        )}
         
         <div className="mt-12 flex justify-center gap-2">
           <div className="w-8 h-1 bg-ph-blue rounded-full"></div>
