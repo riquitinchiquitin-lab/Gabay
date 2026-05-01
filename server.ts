@@ -20,11 +20,28 @@ import jwt from "jsonwebtoken";
 dotenv.config();
 
 let dbInstance: Database.Database | null = null;
+const DB_FILE = "postgress.db";
+const DB_PATH = path.resolve(process.cwd(), DB_FILE);
 
 function getDb() {
   if (!dbInstance) {
-    dbInstance = new Database("postgress.db", { verbose: console.log });
-    dbInstance.pragma('foreign_keys = ON');
+    try {
+      console.log(`[Database] Attempting to open database at: ${DB_PATH}`);
+      dbInstance = new Database(DB_PATH, { verbose: console.log });
+      dbInstance.pragma('foreign_keys = ON');
+      console.log(`[Database] Successfully connected to ${DB_PATH}`);
+    } catch (err: any) {
+      console.error(`[Database] CRITICAL ERROR: Could not open database at ${DB_PATH}:`, err.message);
+      // Fallback for environments where root '/' might not be writable
+      if (err.message.includes("unable to open database file") && !DB_PATH.startsWith("/tmp")) {
+        const fallbackPath = path.join("/tmp", DB_FILE);
+        console.warn(`[Database] Attempting fallback to ${fallbackPath}`);
+        dbInstance = new Database(fallbackPath);
+        dbInstance.pragma('foreign_keys = ON');
+      } else {
+        throw err;
+      }
+    }
   }
   return dbInstance;
 }
@@ -191,7 +208,7 @@ const JWT_SECRET = process.env.SESSION_SECRET || "gabay-wika-jwt-secure-secret-2
 // OAuth setup
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const APP_URL = process.env.APP_URL || "";
+let APP_URL = (process.env.APP_URL || "").replace(/\/$/, "");
 const oauth2Client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
 
 // Role-based JWT decode middleware
@@ -249,13 +266,16 @@ async function createLog(action: string, details?: string, user?: any) {
 // Auth Routes
 app.get("/api/auth/url", (req, res) => {
   const redirectUri = `${APP_URL}/auth/callback`;
+  console.log("Generating Auth URL with redirectUri:", redirectUri);
+  
   const url = oauth2Client.generateAuthUrl({
     access_type: "offline",
     prompt: "consent", // Force consent to get refresh token
     scope: [
+      "openid",
       "https://www.googleapis.com/auth/userinfo.profile", 
-      "https://www.googleapis.com/auth/userinfo.email",
-      "https://www.googleapis.com/auth/youtube.readonly"
+      "https://www.googleapis.com/auth/userinfo.email"
+      // "https://www.googleapis.com/auth/youtube.readonly"
     ],
     redirect_uri: redirectUri,
   });
@@ -263,9 +283,17 @@ app.get("/api/auth/url", (req, res) => {
 });
 
 app.get(["/auth/callback", "/auth/callback/"], async (req, res) => {
-  const { code } = req.query;
+  const { code, error } = req.query;
+  if (error) {
+    console.error("OAuth callback error from Google:", error);
+    return res.status(400).send(`Authentication failed from Google: ${error}`);
+  }
+  
   try {
+    console.log("Received OAuth callback at:", req.url);
     const redirectUri = `${APP_URL}/auth/callback`;
+    console.log("Using redirect_uri for token exchange:", redirectUri);
+    
     const { tokens } = await oauth2Client.getToken({
       code: String(code),
       redirect_uri: redirectUri,
@@ -328,9 +356,9 @@ app.get(["/auth/callback", "/auth/callback/"], async (req, res) => {
         </body>
       </html>
     `);
-  } catch (error) {
-    console.error("Auth error:", error);
-    res.status(500).send("Authentication failed");
+  } catch (error: any) {
+    console.error("Auth error details:", error.response?.data || error.message || error);
+    res.status(500).send(`Authentication failed: ${error.message || 'Unknown error'}`);
   }
 });
 
@@ -724,15 +752,17 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", async () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Current Working Directory: ${process.cwd()}`);
     
     // DB initialization and Health check
     try {
       initializeDb();
-      const userCount = (getDb().prepare('SELECT COUNT(*) as count FROM User').get() as any).count;
+      const db = getDb();
+      const userCount = (db.prepare('SELECT COUNT(*) as count FROM User').get() as any).count;
       console.log(`SQLite storage active. Current user count: ${userCount}`);
       await createLog("SYSTEM_STARTUP", "Application kernel started with Gabay Protocol (SQLite) active");
-    } catch (dbError) {
-      console.error("CRITICAL DATABASE ERROR AT STARTUP:", dbError);
+    } catch (dbError: any) {
+      console.error("CRITICAL DATABASE ERROR AT STARTUP:", dbError.message);
     }
   });
 
