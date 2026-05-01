@@ -640,7 +640,7 @@ const RoleplayGame: React.FC<{
     const config: any = {};
     if (options.mimeType) config.responseMimeType = options.mimeType;
 
-    const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = ai.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
     const contents: any[] = [];
     if (options.history) {
@@ -1134,7 +1134,7 @@ const ExpeditionGame: React.FC<{
       const config: any = {};
       if (options.mimeType) config.responseMimeType = options.mimeType;
 
-      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = ai.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
       
       const result = await model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],

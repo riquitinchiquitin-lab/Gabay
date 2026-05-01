@@ -55,12 +55,15 @@ self.addEventListener('fetch', (event) => {
         // Clone the response
         const responseToCache = response.clone();
 
-        caches.open(CACHE_NAME).then((cache) => {
-          // Don't cache internal API calls unless we want offline data support
-          if (!event.request.url.includes('/api/')) {
-            cache.put(event.request, responseToCache);
-          }
-        });
+        const url = new URL(event.request.url);
+        if (url.protocol === 'http:' || url.protocol === 'https:') {
+          caches.open(CACHE_NAME).then((cache) => {
+            // Don't cache internal API calls unless we want offline data support
+            if (!event.request.url.includes('/api/')) {
+              cache.put(event.request, responseToCache);
+            }
+          });
+        }
 
         return response;
       }).catch(() => {

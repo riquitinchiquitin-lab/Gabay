@@ -282,7 +282,7 @@ export default function App() {
     if (options.mimeType) config.responseMimeType = options.mimeType;
 
     const model = ai.getGenerativeModel({
-      model: modelType === 'tts' ? "gemini-3.1-flash-tts-preview" : "gemini-1.5-flash"
+      model: "gemini-2.0-flash-exp"
     });
     
     const result = await model.generateContent({
