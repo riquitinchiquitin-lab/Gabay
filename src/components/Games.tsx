@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Gamepad2, Brain, MessageSquare, RotateCcw, Send, Sparkles, X, Trophy, Map as MapIcon, Plane, MapPin, GraduationCap, BookOpen, Volume2, Loader2, ChevronRight, ChevronLeft, Plus, Wand2, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import axios from 'axios';
 import { PhilippineSun } from '../App';
 import { localAi } from '../services/localAi';
@@ -11,7 +11,7 @@ const getAiInstance = () => {
   try {
     const key = process.env.GEMINI_API_KEY || '';
     if (!key) return null;
-    return new GoogleGenAI({ apiKey: key });
+    return new GoogleGenerativeAI(key);
   } catch (e) {
     return null;
   }
@@ -640,7 +640,7 @@ const RoleplayGame: React.FC<{
     const config: any = {};
     if (options.mimeType) config.responseMimeType = options.mimeType;
 
-    const model = (ai.models as any).get("gemini-3-flash-preview");
+    const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const contents: any[] = [];
     if (options.history) {
@@ -1134,7 +1134,7 @@ const ExpeditionGame: React.FC<{
       const config: any = {};
       if (options.mimeType) config.responseMimeType = options.mimeType;
 
-      const model = (ai.models as any).get("gemini-3-flash-preview");
+      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
       
       const result = await model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
