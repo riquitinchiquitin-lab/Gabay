@@ -183,6 +183,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [newWord, setNewWord] = useState({ tagalog: "", english: "", category: "Daily" });
   const [newUser, setNewUser] = useState({ email: "", name: "", role: "USER" });
   const [generatingId, setGeneratingId] = useState<string | null>(null);
@@ -293,6 +294,7 @@ export default function App() {
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: config,
+      tools: options.useTools ? [{ googleSearch: {} }] : undefined,
       ...(modelType === 'tts' ? {
         config: {
           responseModalities: ["AUDIO"],
@@ -1091,6 +1093,13 @@ export default function App() {
           <h1 className="text-xl font-black tracking-tight text-app-text uppercase leading-none">Gabay</h1>
         </div>
         <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsSettingsModalOpen(true)}
+            className="p-2 text-app-muted hover:text-ph-blue"
+            title="Settings"
+          >
+            <Settings size={18} />
+          </button>
           <button 
             onClick={toggleTheme}
             className="p-2 text-app-muted hover:text-ph-blue"
@@ -2120,6 +2129,117 @@ export default function App() {
                     </button>
                   </div>
                 </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Word Modal */}
+      <AnimatePresence>
+        {isSettingsModalOpen && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSettingsModalOpen(false)}
+              className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-sm bg-app-card rounded-[2.5rem] shadow-2xl overflow-hidden border border-app-border"
+            >
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-black text-app-text">Settings</h2>
+                  <button 
+                    onClick={() => setIsSettingsModalOpen(false)}
+                    className="p-2 text-app-muted hover:bg-app-muted/10 rounded-full"
+                  >
+                    <Plus className="rotate-45" size={20} />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="p-5 bg-ph-blue rounded-2xl relative overflow-hidden shadow-lg shadow-ph-blue/20">
+                    <div className="absolute top-0 right-0 p-1 opacity-20">
+                      <Sparkles size={32} className="text-ph-yellow" />
+                    </div>
+                    <p className="text-[10px] font-black text-white/90 uppercase tracking-widest mb-1 shadow-sm">AI Configuration</p>
+                    
+                    <div className="space-y-4 mt-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full animate-pulse ${isOnline ? 'bg-ph-yellow shadow-[0_0_8px_#FCD116]' : 'bg-slate-400'}`}></div>
+                          <span className="text-[10px] text-white font-bold uppercase tracking-tight">Cloud Gemini</span>
+                        </div>
+                        <span className={`text-[8px] font-black uppercase ${isOnline ? 'text-ph-yellow' : 'text-white/40'}`}>
+                          {isOnline ? 'Online' : 'Offline'}
+                        </span>
+                      </div>
+
+                      {localAiAvailable && (
+                        <div className="flex flex-col gap-3 pt-2 border-t border-white/10">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${useLocalAi ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-slate-400'}`}></div>
+                              <span className="text-[10px] text-white font-bold uppercase tracking-tight">Local Prompt API</span>
+                            </div>
+                            <span className={`text-[8px] font-black uppercase ${useLocalAi ? 'text-emerald-300' : 'text-white/40'}`}>
+                              {useLocalAi ? 'Active' : 'Offline'}
+                            </span>
+                          </div>
+                          
+                          <button 
+                            onClick={() => setUseLocalAi(!useLocalAi)}
+                            className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${useLocalAi ? 'bg-white text-ph-blue shadow-md' : 'bg-ph-blue/20 text-white border border-white/20'}`}
+                          >
+                            {useLocalAi ? 'Disable Local AI' : 'Enable Local AI'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {isAirportMode && (
+                      <div className="mt-4 pt-3 border-t border-white/10 flex items-center gap-2">
+                        <Globe size={10} className="text-ph-yellow animate-pulse" />
+                        <span className="text-[9px] font-black text-white uppercase tracking-widest">Airport Learning Active</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-black text-app-muted uppercase tracking-[0.2em] px-1">Appearance</p>
+                    <button 
+                      onClick={toggleTheme}
+                      className="w-full flex items-center justify-between p-4 bg-app-bg border border-app-border rounded-2xl hover:bg-app-card transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        {theme === 'light' ? <Moon size={18} className="text-app-muted" /> : <Sun size={18} className="text-ph-yellow" />}
+                        <span className="text-xs font-bold text-app-text">{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
+                      </div>
+                      <div className={`w-10 h-5 rounded-full relative transition-colors ${theme === 'dark' ? 'bg-ph-blue' : 'bg-slate-200'}`}>
+                        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${theme === 'dark' ? 'right-1' : 'left-1'}`} />
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-8 pt-6 border-t border-app-border">
+                  <button 
+                    onClick={() => {
+                      setIsSettingsModalOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-4 text-xs font-black text-ph-red hover:bg-ph-red/5 rounded-2xl transition-colors border border-ph-red/10"
+                  >
+                    <LogOut size={14} />
+                    Sign Out
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>

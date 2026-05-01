@@ -3,6 +3,7 @@ const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/sun.svg',
   '/src/main.tsx',
   '/src/App.tsx',
   '/src/index.css'
