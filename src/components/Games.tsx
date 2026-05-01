@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Gamepad2, Brain, MessageSquare, RotateCcw, Send, Sparkles, X, Trophy, Map as MapIcon, Plane, MapPin, GraduationCap, BookOpen, Volume2, Loader2, ChevronRight, ChevronLeft, Plus, Wand2, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import axios from 'axios';
 import { PhilippineSun } from '../App';
 import { localAi } from '../services/localAi';
@@ -11,7 +11,7 @@ const getAiInstance = () => {
   try {
     const key = process.env.GEMINI_API_KEY || '';
     if (!key) return null;
-    return new GoogleGenerativeAI(key);
+    return new GoogleGenAI({ apiKey: key });
   } catch (e) {
     return null;
   }
@@ -637,28 +637,22 @@ const RoleplayGame: React.FC<{
 
     if (!ai) throw new Error("Cloud AI not initialized");
     
-    const config: any = {};
-    if (options.mimeType) config.responseMimeType = options.mimeType;
+    const config: any = {
+      ...(options.mimeType ? { responseMimeType: options.mimeType } : {}),
+      ...(options.systemInstruction ? { systemInstruction: options.systemInstruction } : {})
+    };
 
-    const model = ai.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
-
-    const contents: any[] = [];
-    if (options.history) {
-       options.history.forEach((m: any) => {
-         contents.push({ role: m.role, parts: [{ text: m.text }] });
-       });
-    }
-    contents.push({ role: 'user', parts: [{ text: prompt }] });
-    
-    const result = await model.generateContent({
-      contents,
-      generationConfig: config,
-      systemInstruction: options.systemInstruction
-    });
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: options.history ? 
+        options.history.map((m: any) => ({ role: m.role, parts: [{ text: m.text }] })).concat([{ role: 'user', parts: [{ text: prompt }] }]) :
+        prompt,
+      config: config
+    } as any);
     
     return { 
-      text: () => result.response.text(),
-      textValue: result.response.text()
+      text: () => response.text || "",
+      textValue: response.text || ""
     };
   };
 
@@ -1131,20 +1125,20 @@ const ExpeditionGame: React.FC<{
 
       if (!ai) throw new Error("Cloud AI not initialized");
       
-      const config: any = {};
-      if (options.mimeType) config.responseMimeType = options.mimeType;
+      const config: any = {
+        ...(options.mimeType ? { responseMimeType: options.mimeType } : {}),
+        ...(options.systemInstruction ? { systemInstruction: options.systemInstruction } : {})
+      };
 
-      const model = ai.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
-      
-      const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: config,
-        systemInstruction: options.systemInstruction
-      });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: config
+      } as any);
       
       return { 
-        text: () => result.response.text(),
-        textValue: result.response.text()
+        text: () => response.text || "",
+        textValue: response.text || ""
       };
     };
     

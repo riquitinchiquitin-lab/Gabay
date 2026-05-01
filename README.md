@@ -31,7 +31,7 @@
 
 - **Frontend**: React 19, Vite, Tailwind CSS v4
 - **Backend**: Node.js, Express
-- **AI Integration**: Google Gemini API (`@google/generative-ai`)
+- **AI Integration**: Google Gemini API (`@google/genai`)
 - **Animations**: Motion (formerly Framer Motion)
 - **Icons**: Lucide React
 - **Persistence**: Better-SQLite3 (Local Encrypted Database)

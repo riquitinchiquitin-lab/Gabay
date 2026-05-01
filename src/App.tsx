@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, Trash2, Sparkles, Filter, Calendar, BookOpen, LogIn, LogOut, Users, LayoutDashboard, ShieldCheck, Sun, Moon, Gamepad2, Wand2, Volume2, Loader2, Compass, LayoutGrid, CheckCircle2, AlertCircle, ArrowRight, MessageSquare, Activity, HardDrive, Lock, Settings, History, Download, Eye, Terminal, Globe, Shield, RefreshCw, Save, Server, Key, Copy, Info, AlertTriangle, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import axios from 'axios';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { Games } from './components/Games';
 import { StudyHub } from './components/StudyHub';
 import { localAi } from './services/localAi';
@@ -12,7 +12,7 @@ const getAiInstance = () => {
   try {
     const key = process.env.GEMINI_API_KEY || '';
     if (!key) return null;
-    return new GoogleGenerativeAI(key);
+    return new GoogleGenAI({ apiKey: key });
   } catch (e) {
     console.warn("AI Initialization postponed: process.env.GEMINI_API_KEY access failed.");
     return null;
@@ -278,32 +278,27 @@ export default function App() {
 
     if (!ai) throw new Error("Cloud AI not initialized");
     
-    const config: any = {};
-    if (options.mimeType) config.responseMimeType = options.mimeType;
-
-    const model = ai.getGenerativeModel({
-      model: "gemini-2.0-flash-exp"
-    });
-    
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: config,
-      tools: options.useTools ? [{ googleSearch: {} }] : undefined,
+    const config: any = {
+      ...(options.mimeType ? { responseMimeType: options.mimeType } : {}),
       ...(modelType === 'tts' ? {
-        config: {
-          responseModalities: ["AUDIO"],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: 'Kore' },
-            },
+        responseModalities: ["AUDIO"],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Kore' },
           },
-        }
-      } as any : {})
-    });
+        },
+      } : {})
+    };
+
+    const response = await ai.models.generateContent({
+      model: modelType === 'tts' ? "gemini-3.1-flash-tts-preview" : "gemini-3-flash-preview",
+      contents: prompt,
+      config: config,
+      tools: options.useTools ? [{ googleSearch: {} }] : undefined,
+    } as any);
     
-    const response = result.response;
     return { 
-      text: response.text ? response.text() : "", 
+      text: response.text || "", 
       response: response 
     };
   };
