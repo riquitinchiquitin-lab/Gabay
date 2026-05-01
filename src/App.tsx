@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Sparkles, Filter, Calendar, BookOpen, LogIn, LogOut, Users, LayoutDashboard, ShieldCheck, Sun, Moon, Gamepad2, Wand2, Volume2, Loader2, Compass, LayoutGrid, CheckCircle2, AlertCircle, ArrowRight, Music, Youtube, Play, MessageSquare, Activity, HardDrive, Lock, Settings, History, Download, Eye, Terminal, Globe, Shield, RefreshCw, Save, Server, Key, Copy, Info, AlertTriangle, Database } from 'lucide-react';
+import { Search, Plus, Trash2, Sparkles, Filter, Calendar, BookOpen, LogIn, LogOut, Users, LayoutDashboard, ShieldCheck, Sun, Moon, Gamepad2, Wand2, Volume2, Loader2, Compass, LayoutGrid, CheckCircle2, AlertCircle, ArrowRight, MessageSquare, Activity, HardDrive, Lock, Settings, History, Download, Eye, Terminal, Globe, Shield, RefreshCw, Save, Server, Key, Copy, Info, AlertTriangle, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import axios from 'axios';
 import { GoogleGenAI } from "@google/genai";
@@ -171,7 +171,7 @@ export const PhilippineSun = ({ size = 24, className = "" }: { size?: number; cl
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [view, setView] = useState<'dashboard' | 'management' | 'games' | 'study' | 'explorer' | 'songExplorer'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'management' | 'games' | 'study' | 'explorer'>('dashboard');
   
   const [words, setWords] = useState<Word[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -192,12 +192,6 @@ export default function App() {
   const [isExplorerLoading, setIsExplorerLoading] = useState(false);
   const [suggestedThemes, setSuggestedThemes] = useState<string[]>([]);
   const [explorerWordCount, setExplorerWordCount] = useState<number>(10);
-  const [songUrl, setSongUrl] = useState("");
-  const [songResults, setSongResults] = useState<any[]>([]);
-  const [isSongLoading, setIsSongLoading] = useState(false);
-  const [youtubeLibrary, setYoutubeLibrary] = useState<any[]>([]);
-  const [isLibraryLoading, setIsLibraryLoading] = useState(false);
-  const [showLibrary, setShowLibrary] = useState(false);
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [cloudflareToken, setCloudflareToken] = useState("");
   const [configSource, setConfigSource] = useState<"ENVIRONMENT" | "DATABASE" | "NONE">("NONE");
@@ -676,57 +670,6 @@ export default function App() {
     fetchThemedWords(explorerSearch);
   };
 
-  const fetchSongWords = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!songUrl.trim()) return;
-    executeAnalysis(songUrl);
-  };
-
-  const executeAnalysis = async (url: string) => {
-    setIsSongLoading(true);
-    setSongResults([]);
-    try {
-      if (!isOnline) {
-        triggerError("Melody Learner requires an internet connection to search for lyrics.");
-        return;
-      }
-
-      const prompt = `I want to learn Tagalog from this song/video: ${url}. 
-        Cross-reference multiple lyrics platforms like Genius, Musixmatch, AZLyrics, and OPMLyrics to find the most accurate and complete Tagalog lyrics for this song. 
-        Analyze the song structure and concentrate your extraction on the CHORUS and words/phrases that are frequently REPEATED throughout the track...
-        Format as JSON array: [{"tagalog": "...", "english": "...", "lyricsLine": "...", "category": "..."}]`;
-
-      const response = await generateWithAi(prompt, 'flash', { useTools: true, mimeType: "application/json" });
-      const results = JSON.parse(response.text || "[]");
-      setSongResults(results);
-    } catch (error) {
-      console.error("Song AI Error:", error);
-      triggerError("Failed to analyze this song. Please make sure the URL is valid or the song is in Tagalog!");
-    } finally {
-      setIsSongLoading(false);
-      setShowLibrary(false);
-    }
-  };
-
-  const fetchYoutubeLibrary = async () => {
-    setIsLibraryLoading(true);
-    try {
-      const resp = await axios.get('/api/youtube/library');
-      setYoutubeLibrary(resp.data);
-      setShowLibrary(true);
-    } catch (err: any) {
-      if (err.response?.status === 401) {
-        if (confirm("YouTube library access needs permission. Would you like to reconnect your account?")) {
-          handleLogin();
-        }
-      } else {
-        triggerError("Failed to fetch YouTube library. Make sure you've granted YouTube permissions.");
-      }
-    } finally {
-      setIsLibraryLoading(false);
-    }
-  };
-
   const addExplorerWord = async (word: any, index: number) => {
     if (addingExplorerWords.has(word.tagalog)) return;
     
@@ -981,14 +924,6 @@ export default function App() {
             Theme Explorer
           </button>
 
-          <button 
-            onClick={() => setView('songExplorer')}
-            className={`w-full flex items-center px-4 py-3 rounded-xl font-medium transition-all ${view === 'songExplorer' ? 'bg-ph-blue text-white shadow-md shadow-ph-blue/20' : 'text-app-muted hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
-          >
-            <Music size={18} className="mr-3" />
-            Melody Learner
-          </button>
-          
           {user.role === 'ADMIN' && (
             <button 
               onClick={() => setView('management')}
@@ -1132,176 +1067,6 @@ export default function App() {
           />
         ) : view === 'study' ? (
           <StudyHub words={words} playAudio={playAudio} playingId={playingId} logWordResult={logWordResult} />
-        ) : view === 'songExplorer' ? (
-          <div className="flex-1 flex flex-col">
-             <header className="h-16 md:h-20 bg-app-card border-b border-app-border px-4 md:px-8 flex items-center justify-between flex-shrink-0 gap-3">
-                <div className="flex items-center gap-2 md:gap-4 flex-1">
-                   <h2 className="text-sm md:text-lg font-black text-app-text whitespace-nowrap hidden xs:block">Melody Learner</h2>
-                   <form onSubmit={fetchSongWords} className="relative w-full max-w-[200px] md:max-w-md">
-                     <Music className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-ph-blue" size={14} />
-                     <input 
-                       type="text" 
-                       placeholder="YouTube Link..."
-                       value={songUrl}
-                       onChange={(e) => setSongUrl(e.target.value)}
-                       className="w-full pl-9 md:pl-10 pr-16 md:pr-24 py-1.5 md:py-2 bg-app-bg border border-transparent rounded-full text-[10px] md:text-xs font-medium focus:bg-app-card focus:ring-2 focus:ring-ph-blue focus:border-ph-blue outline-none transition-all placeholder:text-app-muted"
-                     />
-                     <button 
-                       type="submit"
-                       disabled={isSongLoading || !songUrl.trim()}
-                       className="absolute right-1 top-1/2 -translate-y-1/2 bg-ph-blue text-white px-3 md:px-4 py-1 md:py-1.5 rounded-full text-[8px] md:text-[10px] font-black uppercase hover:opacity-90 disabled:opacity-50"
-                     >
-                       {isSongLoading ? <Loader2 size={10} className="animate-spin" /> : "Analyze"}
-                     </button>
-                   </form>
-                   <button 
-                     onClick={fetchYoutubeLibrary}
-                     disabled={isLibraryLoading}
-                     className="flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-red-600 text-white rounded-full text-[8px] md:text-[10px] font-black uppercase hover:bg-red-700 transition-all disabled:opacity-50"
-                   >
-                     {isLibraryLoading ? <Loader2 size={10} className="animate-spin" /> : <Youtube size={10} className="md:size-[12px]" />}
-                     <span className="hidden sm:inline">Library</span>
-                   </button>
-                </div>
-                {songResults.length > 0 && (
-                  <button 
-                    onClick={() => {
-                      songResults.forEach((w, i) => addExplorerWord(w, i));
-                    }}
-                    className="px-4 md:px-5 py-2 md:py-2.5 bg-ph-blue text-white rounded-full text-[10px] md:text-sm font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-md flex items-center gap-2"
-                  >
-                    <Plus size={14} className="md:size-[18px]" />
-                    <span className="hidden sm:inline">Add All</span>
-                  </button>
-                )}
-             </header>
-
-             <div className="flex-1 p-3 md:p-12 bg-app-bg/30 relative">
-               <AnimatePresence>
-                 {showLibrary && (
-                   <motion.div 
-                     initial={{ opacity: 0, scale: 0.95 }}
-                     animate={{ opacity: 1, scale: 1 }}
-                     exit={{ opacity: 0, scale: 0.95 }}
-                     className="fixed inset-0 z-50 bg-app-bg/95 p-6 md:p-12 flex flex-col"
-                   >
-                      <div className="flex justify-between items-end mb-8">
-                        <div>
-                          <h2 className="text-3xl font-black text-app-text mb-1">Your Liked Songs</h2>
-                          <p className="text-app-muted font-bold">Pick one to break down its Tagalog essence.</p>
-                        </div>
-                        <button 
-                          onClick={() => setShowLibrary(false)}
-                          className="px-6 py-2 border border-app-border rounded-full text-xs font-black uppercase tracking-widest hover:bg-app-card transition-all"
-                        >
-                          Close
-                        </button>
-                      </div>
-
-                      <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                           {youtubeLibrary.map((item: any) => (
-                             <button 
-                               key={item.id}
-                               onClick={() => {
-                                 const url = `https://www.youtube.com/watch?v=${item.id}`;
-                                 setSongUrl(url);
-                                 executeAnalysis(url);
-                               }}
-                               className="group text-left space-y-3 focus:outline-none"
-                             >
-                               <div className="aspect-video rounded-2xl overflow-hidden relative border border-app-border bg-app-muted/10">
-                                 <img 
-                                   src={item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default?.url} 
-                                   alt={item.snippet.title}
-                                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                   referrerPolicy="no-referrer"
-                                 />
-                                 <div className="absolute inset-0 bg-ph-blue/0 group-hover:bg-ph-blue/20 transition-colors flex items-center justify-center">
-                                   <Play size={32} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                 </div>
-                               </div>
-                               <div className="px-1">
-                                 <h4 className="font-bold text-xs text-app-text line-clamp-2 group-hover:text-ph-blue transition-colors">
-                                   {item.snippet.title}
-                                 </h4>
-                                 <p className="text-[10px] text-app-muted font-medium mt-1">
-                                   {item.snippet.channelTitle}
-                                 </p>
-                               </div>
-                             </button>
-                           ))}
-                        </div>
-                      </div>
-                   </motion.div>
-                 )}
-               </AnimatePresence>
-
-               <div className="max-w-4xl mx-auto">
-                 {!songResults.length && !isSongLoading ? (
-                    <div className="text-center py-20 space-y-6">
-                       <div className="w-24 h-24 bg-red-500/10 rounded-[2rem] mx-auto flex items-center justify-center">
-                         <Youtube size={40} className="text-red-500" />
-                       </div>
-                       <div className="space-y-2">
-                         <h3 className="text-2xl font-black text-app-text">Learn from the Melody</h3>
-                         <p className="text-app-muted max-w-sm mx-auto">Paste a YouTube Music link and Gabay AI will extract essential lyrics for you.</p>
-                       </div>
-                    </div>
-                 ) : isSongLoading ? (
-                    <div className="text-center py-20 space-y-4">
-                      <div className="w-12 h-12 border-4 border-ph-blue border-t-transparent rounded-full animate-spin mx-auto"></div>
-                      <p className="text-app-muted font-bold animate-pulse">Analyzing track lyrics...</p>
-                    </div>
-                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
-                      {songResults.map((word, idx) => (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.05 }}
-                          key={idx}
-                           className="bg-app-card border border-app-border p-3 md:p-5 rounded-lg md:rounded-xl shadow-sm hover:shadow-md transition-all relative overflow-hidden group"
-                        >
-                          <div className="absolute top-0 right-0 p-4 opacity-0 md:opacity-5 group-hover:opacity-10 transition-opacity">
-                            <Music size={24} className="md:size-[32px]" />
-                          </div>
-                          <div className="flex justify-between items-start mb-2 md:mb-3">
-                            <span className="px-2 py-0.5 bg-ph-yellow/10 text-ph-yellow-text rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-widest">
-                              {word.category}
-                            </span>
-                            <div className="flex gap-1.5">
-                              <button 
-                                onClick={() => playAudio(word.tagalog, `song-${idx}`)}
-                                disabled={playingId !== null}
-                                className={`p-1.5 md:p-2 rounded-lg transition-all ${playingId === `song-${idx}` ? 'bg-ph-blue text-white' : 'bg-app-muted/10 text-app-text hover:bg-ph-blue/10'}`}
-                              >
-                                {playingId === `song-${idx}` ? <Loader2 size={12} className="animate-spin md:size-[14px]" /> : <Volume2 size={12} className="md:size-[14px]" />}
-                              </button>
-                              <button 
-                               onClick={() => addExplorerWord(word, idx)}
-                               disabled={addingExplorerWords.has(word.tagalog)}
-                               className={`p-1.5 md:p-2 rounded-lg transition-all ${addingExplorerWords.has(word.tagalog) ? 'bg-emerald-500 text-white' : 'bg-ph-blue text-white hover:scale-110 shadow-lg shadow-ph-blue/20'}`}
-                              >
-                               {addingExplorerWords.has(word.tagalog) ? <CheckCircle2 size={12} className="md:size-[14px]" /> : <Plus size={12} className="md:size-[14px]" />}
-                              </button>
-                            </div>
-                          </div>
-                          <h3 className="text-base md:text-lg font-black text-app-text mb-0.5">{word.tagalog}</h3>
-                          <p className="text-sm md:text-base font-bold text-app-muted mb-2 md:mb-3">{word.english}</p>
-                          {word.lyricsLine && (
-                            <div className="pt-2 md:pt-3 border-t border-app-border flex items-start gap-1.5">
-                              <Play size={10} className="text-ph-blue mt-0.5 shrink-0" />
-                              <p className="text-[9px] md:text-[10px] text-app-muted leading-relaxed italic">"{word.lyricsLine}"</p>
-                            </div>
-                          )}
-                        </motion.div>
-                      ))}
-                    </div>
-                 )}
-               </div>
-             </div>
-          </div>
         ) : view === 'explorer' ? (
           <div className="flex-1 flex flex-col">
              <header className="h-16 md:h-20 bg-app-card border-b border-app-border px-4 md:px-8 flex items-center justify-between flex-shrink-0 gap-3">

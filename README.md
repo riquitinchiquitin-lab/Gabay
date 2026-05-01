@@ -1,15 +1,15 @@
-# Gabay: Tagalog Learning Helper 🎶🇵🇭
+# Gabay: Tagalog Learning Helper 🇵🇭
 
-**Gabay: Tagalog Learning Helper** is an AI-powered language learning application designed to help you master Tagalog through the power of music and interactive exploration. By combining music lyric extraction with structured gamification, Gabay turns the challenge of language acquisition into an immersive, rhythmic journey.
+**Gabay: Tagalog Learning Helper** is an AI-powered language learning application designed to help you master Tagalog through intelligent exploration and interactive practice. Gabay turns the challenge of language acquisition into an immersive, cultural journey.
 
 ---
 
 ## ✨ Features
 
-### 🎵 Melody Learner (YouTube Lyric Extraction)
-- **Lyrics extraction**: Paste a YouTube link and watch as the AI extracts lyrics.
-- **Smart Translation**: Get real-time English translations for Tagalog lyrics.
-- **Vocabulary Discovery**: Tap any word to see its meaning and add it to your personal word bank.
+### 🔍 Theme Explorer
+- **AI Word Generation**: Dynamically discover Tagalog vocabulary based on cultural themes (e.g., "Food", "Travel", "History").
+- **Smart Translation**: Get real-time English translations for Tagalog words and expressions.
+- **Instant Audio**: Hear natural-sounding pronunciations for any word in your bank.
 
 ### 🕹️ Interactive Games
 - **Expedition**: Journey through Filipino cities like Manila, Cebu, and Davao. Interact with local guides and complete vocabulary challenges.
@@ -20,6 +20,7 @@
 - **Adaptive UI**: Beautifully crafted interface with full Dark and Light mode support.
 - **Dynamic Styling**: Experience Tagalog text in vibrant **yellow** in dark mode and **bold red** in light mode, reflecting the colors of the Philippine flag.
 - **Motion-Driven**: Fluid transitions and feedback provided by `motion`.
+- **Local AI Support**: Use Google's Local Prompt API for offline learning when available.
 
 ### 📱 PWA Ready
 - Install Gabay directly on your mobile device for a native-like learning experience anywhere.

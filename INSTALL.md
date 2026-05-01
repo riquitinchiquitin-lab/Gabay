@@ -107,12 +107,12 @@ docker compose logs -f
 
 1. **First Login**: Sign in with the Google account matching the `ADMIN_EMAIL` specified in your `.env`.
 2. **Explore Vocabulary**: Browse the built-in dictionary or start adding new Tagalog phrases.
-3. **Analyze Lyrics**: Use the AI tool to break down Tagalog songs and learn the rhythmic nuances of the language.
+3. **AI Discovery**: Use the Theme Explorer to generate vocabulary lists based on cultural topics.
 
 ---
 
 ## 📱 5. Mobile Access & AI Protocol
-Gabay is designed for offline-first, rhythmic learning.
+Gabay is designed for immersive, rhythmic learning.
 
 ### PWA Installation
 For the best experience, install Gabay as a "web app":
@@ -121,11 +121,11 @@ For the best experience, install Gabay as a "web app":
 
 ### 🛫 Airport Learning Mode (Offline)
 Gabay supports full offline capabilities when your device supports the **Web Prompt API**:
-1. **Enable Local AI**: In the dashboard sidebar, if your browser supports it, you will see a "Local Prompt API" option. Toggle this to **ACTIVE**.
+1. **Enable Local AI**: In the Settings modal, if your browser supports it, you will see a "Local Prompt API" option. Toggle this to **ACTIVE**.
 2. **Offline Data**: The Service Worker caches the core UI and your recently synced vocabulary.
 3. **Local Reasoning**: Even without internet, Gabay can generate example sentences and conduct roleplay conversations using your device's native silicon (Tensor/A-series/WebGPU).
 
-**Note**: Voice synthesis (TTS) and Song Exploration still require an active connection for cloud-based processing.
+**Note**: Voice synthesis (TTS) still requires an active connection for cloud-based processing.
 
 ---
 

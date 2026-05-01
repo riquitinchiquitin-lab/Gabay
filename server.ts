@@ -165,7 +165,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://www.google.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      imgSrc: ["'self'", "data:", "https://www.google.com", "https://i.ytimg.com", "https://*.googleusercontent.com"],
+      imgSrc: ["'self'", "data:", "https://www.google.com", "https://*.googleusercontent.com"],
       connectSrc: ["'self'", "https://generativelanguage.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       frameAncestors: ["'self'", "https://*.run.app", "https://ais-pre-*.run.app", "https://*.google.com"],
@@ -274,8 +274,7 @@ app.get("/api/auth/url", (req, res) => {
     scope: [
       "openid",
       "https://www.googleapis.com/auth/userinfo.profile", 
-      "https://www.googleapis.com/auth/userinfo.email",
-      "https://www.googleapis.com/auth/youtube.readonly"
+      "https://www.googleapis.com/auth/userinfo.email"
     ],
     redirect_uri: redirectUri,
   });
@@ -703,34 +702,6 @@ app.post("/api/words/:id/log-result", isAuthenticated, async (req: any, res, nex
     res.json({ success: true });
   } catch (error) {
     handleApiError(res, next, error, "Failed to log word result");
-  }
-});
-
-// YouTube Integration
-app.get("/api/youtube/library", isAuthenticated, async (req: any, res) => {
-  try {
-    const user = getDb().prepare('SELECT * FROM User WHERE id = ?').get(req.user.userId) as any;
-
-    if (!user || !user.accessToken) {
-      return res.status(401).json({ error: "YouTube not connected" });
-    }
-
-    const accessToken = ENCRYPTION_SERVICE.decrypt(user.accessToken as string);
-    const response = await axios.get("https://www.googleapis.com/youtube/v3/videos", {
-      params: {
-        part: "snippet,contentDetails",
-        myRating: "like",
-        maxResults: 24
-      },
-      headers: {
-        Authorization: `Bearer ${accessToken}`
-      }
-    });
-
-    res.json(response.data.items);
-  } catch (error: any) {
-    console.error("YouTube Library Error:", error.response?.data || error.message);
-    res.status(500).json({ error: "Failed to fetch YouTube library" });
   }
 });
 
