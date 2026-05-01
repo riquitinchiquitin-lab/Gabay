@@ -3,12 +3,16 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "NODE_ENV=development tsx server.ts",
     "build": "vite build",
     "start": "NODE_ENV=production node server.ts",
     "lint": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "purge": "node cleanup.js"
   },
   "dependencies": {
     "@google/genai": "^1.50.1",
