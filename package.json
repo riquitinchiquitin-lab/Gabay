@@ -15,7 +15,7 @@
     "purge": "node cleanup.js"
   },
   "dependencies": {
-    "@google/genai": "^1.50.1",
+    "@google/generative-ai": "^0.24.1",
     "@tailwindcss/vite": "^4.1.14",
     "@types/cookie-parser": "^1.4.7",
     "@types/express-session": "^1.18.1",

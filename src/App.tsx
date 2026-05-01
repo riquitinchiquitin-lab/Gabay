@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, Trash2, Sparkles, Filter, Calendar, BookOpen, LogIn, LogOut, Users, LayoutDashboard, ShieldCheck, Sun, Moon, Gamepad2, Wand2, Volume2, Loader2, Compass, LayoutGrid, CheckCircle2, AlertCircle, ArrowRight, MessageSquare, Activity, HardDrive, Lock, Settings, History, Download, Eye, Terminal, Globe, Shield, RefreshCw, Save, Server, Key, Copy, Info, AlertTriangle, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import axios from 'axios';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Games } from './components/Games';
 import { StudyHub } from './components/StudyHub';
 import { localAi } from './services/localAi';
@@ -12,7 +12,7 @@ const getAiInstance = () => {
   try {
     const key = process.env.GEMINI_API_KEY || '';
     if (!key) return null;
-    return new GoogleGenAI({ apiKey: key });
+    return new GoogleGenerativeAI(key);
   } catch (e) {
     console.warn("AI Initialization postponed: process.env.GEMINI_API_KEY access failed.");
     return null;
@@ -269,7 +269,7 @@ export default function App() {
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
-  const generateWithAi = async (prompt: string, modelType: 'flash' | 'tts' = 'flash', options: any = {}): Promise<any> => {
+  const generateWithAi = async (prompt: string, modelType: 'flash' | 'tts' = 'flash', options: any = {}): Promise<{ text: string, response?: any }> => {
     if (useLocalAi && localAiAvailable && modelType !== 'tts' && !options.useTools) {
       console.log("Using Local AI for generation...");
       const text = await localAi.prompt(prompt);
@@ -281,9 +281,9 @@ export default function App() {
     const config: any = {};
     if (options.mimeType) config.responseMimeType = options.mimeType;
 
-    const model = (ai.models as any).get(
-      modelType === 'tts' ? "gemini-3.1-flash-tts-preview" : "gemini-3-flash-preview"
-    );
+    const model = ai.getGenerativeModel({
+      model: modelType === 'tts' ? "gemini-3.1-flash-tts-preview" : "gemini-1.5-flash"
+    });
     
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -298,10 +298,14 @@ export default function App() {
             },
           },
         }
-      } : {})
+      } as any : {})
     });
     
-    return result.response;
+    const response = result.response;
+    return { 
+      text: response.text ? response.text() : "", 
+      response: response 
+    };
   };
 
   useEffect(() => {
@@ -761,7 +765,7 @@ export default function App() {
     setPlayingId(id);
     try {
       const response = await generateWithAi(`Pronounce clearly: ${text}`, 'tts');
-      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      const base64Audio = response.response?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
       if (base64Audio) {
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
         const binaryString = atob(base64Audio);

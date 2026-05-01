@@ -12,7 +12,20 @@ class LocalAiService {
 
   async isAvailable(): Promise<boolean> {
     if (typeof window === 'undefined') return false;
-    // Check for the standard Chrome/Safari Prompt API
+    
+    // Check for modern languageModel API
+    if ((window as any).ai?.languageModel?.canCreate) {
+      const status = await (window as any).ai.languageModel.canCreate();
+      if (status !== 'no') return true;
+    }
+    
+    // Fallback for older assistant API
+    if ((window as any).ai?.assistant?.canCreate) {
+      const status = await (window as any).ai.assistant.canCreate();
+      if (status !== 'no') return true;
+    }
+
+    // legacy GenericSession check
     return !!(window as any).ai?.canCreateGenericSession && (await (window as any).ai.canCreateGenericSession()) !== 'no';
   }
 
@@ -21,7 +34,13 @@ class LocalAiService {
     
     if (await this.isAvailable()) {
       try {
-        this.session = await (window as any).ai.createGenericSession(options);
+        if ((window as any).ai?.languageModel?.create) {
+          this.session = await (window as any).ai.languageModel.create(options);
+        } else if ((window as any).ai?.assistant?.create) {
+          this.session = await (window as any).ai.assistant.create(options);
+        } else if ((window as any).ai?.createGenericSession) {
+          this.session = await (window as any).ai.createGenericSession(options);
+        }
         return this.session;
       } catch (e) {
         console.error("Failed to create Local AI session:", e);
