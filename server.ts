@@ -342,16 +342,45 @@ app.get(["/auth/callback", "/auth/callback/"], async (req, res) => {
 
     res.send(`
       <html>
+        <head>
+          <title>Gabay: Authentication Successful</title>
+          <style>
+            body { 
+              margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; 
+              height: 100vh; font-family: system-ui, -apple-system, sans-serif; 
+              background: #0F172A; color: #F8FAFC; overflow: hidden;
+            }
+            .card { text-align: center; }
+            .spinner { 
+              width: 48px; height: 48px; border: 5px solid rgba(252, 209, 22, 0.2); 
+              border-top-color: #FCD116; border-radius: 50%; 
+              animation: spin 1s linear infinite; margin: 0 auto 24px;
+            }
+            @keyframes spin { to { transform: rotate(360deg); } }
+            h1 { font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; margin: 0; }
+          </style>
+        </head>
         <body>
+          <div class="card">
+            <div class="spinner"></div>
+            <h1>Syncing Identity...</h1>
+          </div>
           <script>
-            if (window.opener) {
-              window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', token: '${token}' }, '*');
-              window.close();
-            } else {
-              window.location.href = '/?token=${token}';
+            const token = '${token}';
+            try {
+              if (window.opener && window.opener !== window) {
+                window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', token: token }, '*');
+                // Give a moment for postMessage to be processed before closing
+                setTimeout(() => window.close(), 800);
+              } else {
+                // Direct redirect case (no opener)
+                window.location.href = '/?token=' + token;
+              }
+            } catch (e) {
+              // Fallback for security/blocking issues
+              window.location.href = '/?token=' + token;
             }
           </script>
-          <p>Authentication successful. Closing window...</p>
         </body>
       </html>
     `);

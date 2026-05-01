@@ -385,6 +385,17 @@ export default function App() {
     setIsLoggingIn(true);
     try {
       const { data } = await axios.get('/api/auth/url');
+
+      // Check if we are in an iframe (e.g. AI Studio Preview)
+      const isInIframe = window.self !== window.top;
+
+      if (!isInIframe) {
+        // Desktop/Mobile standalone mode: Continue in the same tab
+        window.location.href = data.url;
+        return; // Page will unload, keep isLoggingIn true to prevent double clicks
+      }
+
+      // Preview mode: Prefer popup to stay within AI Studio interface if possible
       const width = 600;
       const height = 700;
       const left = window.screen.width / 2 - width / 2;
@@ -396,18 +407,25 @@ export default function App() {
         `width=${width},height=${height},left=${left},top=${top}`
       );
 
-      // If popup fails (blocked), use dev-login as fallback unless disabled
+      // If popup fails (blocked), attempt a top-level redirect as fallback
       if (!popup) {
-        if (import.meta.env.VITE_DISABLE_DEV_AUTH === 'true') {
-          triggerError("Login popup was blocked. Please enable popups to sign in.");
+        console.warn("Popup blocked, attempting top-level redirect fallback.");
+        try {
+          window.top!.location.href = data.url;
           return;
+        } catch (e) {
+          // Final fallback to dev-login if top-level redirect is also blocked
+          if (import.meta.env.VITE_DISABLE_DEV_AUTH === 'true') {
+            triggerError("Login popup was blocked. Please enable popups to sign in.");
+            return;
+          }
+          console.warn("Top-level redirect failed, falling back to dev login");
+          const resp = await axios.post('/api/auth/dev-login');
+          const { user: userData, token: userToken } = resp.data;
+          localStorage.setItem('gabay_auth_token', userToken);
+          axios.defaults.headers.common['Authorization'] = `Bearer ${userToken}`;
+          setUser(userData);
         }
-        console.warn("Popup blocked, falling back to dev login");
-        const resp = await axios.post('/api/auth/dev-login');
-        const { user: userData, token: userToken } = resp.data;
-        localStorage.setItem('gabay_auth_token', userToken);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${userToken}`;
-        setUser(userData);
       }
     } catch (err) {
       if (import.meta.env.VITE_DISABLE_DEV_AUTH === 'true') {
