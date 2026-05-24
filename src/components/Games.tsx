@@ -50,6 +50,8 @@ export const Games: React.FC<GamesProps> = ({
   localAiAvailable
 }) => {
   const [activeGame, setActiveGame] = useState<'none' | 'matching' | 'quiz' | 'roleplay' | 'expedition'>('none');
+  const [selectedGame, setSelectedGame] = useState<'quiz' | 'matching' | 'roleplay' | 'expedition'>('quiz');
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard' | 'expert'>('medium');
   const [gameLimit, setGameLimit] = useState<number>(10);
 
   const startWithLimit = (game: 'matching' | 'quiz', limit: number) => {
@@ -57,120 +59,252 @@ export const Games: React.FC<GamesProps> = ({
     setActiveGame(game);
   };
 
+  const handleStartGame = () => {
+    const limitMap = {
+      quiz: { easy: 5, medium: 10, hard: 15, expert: 20 },
+      matching: { easy: 4, medium: 8, hard: 12, expert: 16 },
+      expedition: { easy: 5, medium: 10, hard: 15, expert: 15 },
+      roleplay: { easy: 10, medium: 15, hard: 20, expert: 25 }
+    };
+    const limitValue = limitMap[selectedGame][difficulty];
+    setGameLimit(limitValue);
+    setActiveGame(selectedGame);
+  };
+
+  const getDifficultyValueLabel = () => {
+    switch (selectedGame) {
+      case 'quiz':
+        return difficulty === 'easy' ? '5 Words' : difficulty === 'medium' ? '10 Words' : difficulty === 'hard' ? '15 Words' : '20 Words';
+      case 'matching':
+        return difficulty === 'easy' ? '4 Pairs (8 Cards)' : difficulty === 'medium' ? '8 Pairs (16 Cards)' : difficulty === 'hard' ? '12 Pairs (24 Cards)' : '16 Pairs (32 Cards)';
+      case 'roleplay':
+        return difficulty === 'easy' ? 'Casual (short)' : difficulty === 'medium' ? 'Standard' : difficulty === 'hard' ? 'Intermediate' : 'Full Immersion';
+      case 'expedition':
+        return difficulty === 'easy' ? 'Focus (5 Local Words)' : difficulty === 'medium' ? 'Marathon (10 Local Words)' : 'Expert (15 Local Words)';
+    }
+  };
+
+  const getDifficultyTitle = (diff: 'easy' | 'medium' | 'hard' | 'expert') => {
+    switch (diff) {
+      case 'easy': return 'Easy';
+      case 'medium': return 'Medium';
+      case 'hard': return 'Hard';
+      case 'expert': return 'Expert';
+    }
+  };
+
   if (activeGame === 'none') {
     return (
-      <div className="p-4 md:p-8 max-w-6xl mx-auto">
-        <header className="mb-8 md:mb-12">
-          <h1 className="text-2xl md:text-4xl font-black text-app-text mb-2 md:mb-4 border-l-4 md:border-l-8 border-ph-blue pl-4 md:pl-6 leading-tight">Learning Games</h1>
-          <p className="text-app-muted text-sm md:text-lg font-medium max-w-2xl leading-relaxed">
-            Put your vocabulary to the test with interactive challenges. Practice through memory matching or real-life situational roleplay.
-          </p>
-        </header>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
-          {/* Quiz Game Card */}
-          <div className="group relative bg-app-card border border-app-border rounded-xl md:rounded-[3rem] p-5 md:p-10 overflow-hidden shadow-xl">
-            <div className="absolute top-0 right-0 p-6 md:p-12 opacity-5">
-              <GraduationCap size={80} className="md:size-[160px]" />
-            </div>
-            <div className="w-12 h-12 md:w-16 md:h-16 bg-emerald-500 rounded-xl md:rounded-2xl flex items-center justify-center mb-4 md:mb-6 shadow-lg shadow-emerald-500/20">
-              <BookOpen className="text-white md:size-[32px]" size={24} />
-            </div>
-            <h2 className="text-xl md:text-2xl font-black text-app-text mb-2 md:mb-4">Tagalog Quick Quiz</h2>
-            <p className="text-sm md:text-base text-app-muted font-medium mb-6 md:mb-8 leading-relaxed">
-              The classic multiple choice challenge. Test your recall with a set number of words.
+      <div className="h-full w-full overflow-y-auto custom-scrollbar flex flex-col p-3 md:p-6 bg-app-bg">
+        <div className="max-w-none px-4 md:px-10 lg:px-16 w-full flex-1 flex flex-col justify-center gap-3">
+          {/* Extremely Compact Header */}
+          <header className="mb-1 text-center md:text-left shrink-0">
+            <h1 className="text-xl md:text-2xl font-black text-app-text flex items-center justify-center md:justify-start gap-2 border-l-4 border-ph-blue pl-3 leading-tight select-none">
+              Learning Games Hub
+            </h1>
+            <p className="text-app-muted text-[11px] font-semibold tracking-wide hidden sm:block mt-0.5">
+              Select one of the 4 interactive games, choose active difficulty levels, and start your test!
             </p>
-            
-            <div className="space-y-4">
-              <p className="text-[10px] font-black text-app-muted uppercase tracking-widest text-center">Select Vocabulary Size</p>
-              <div className="grid grid-cols-2 gap-2">
-                {[5, 10, 15, 20].map(n => (
-                  <button 
-                    key={n}
-                    onClick={() => startWithLimit('quiz', n)}
-                    className="py-3 bg-app-bg border border-app-border rounded-xl text-xs font-black hover:bg-emerald-500 hover:text-white transition-all hover:scale-105 active:scale-95 shadow-sm"
-                  >
-                    {n} Words
-                  </button>
-                ))}
+          </header>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 lg:gap-8 items-stretch flex-1">
+            {/* Step 1: Active 2x2 Selection Grid */}
+            <div className="md:col-span-7 flex flex-col gap-3 md:gap-4 flex-1">
+              <div className="flex items-center gap-2 shrink-0 select-none">
+                <span className="w-4 h-4 md:w-6 md:h-6 flex items-center justify-center rounded-full bg-ph-blue text-white text-[9px] md:text-xs font-black">1</span>
+                <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-app-muted">Tap Game Mode</span>
               </div>
+
+              <div className="grid grid-cols-2 gap-3 md:gap-4 flex-1">
+                {/* 1. Tagalog Quick Quiz */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedGame('quiz')}
+                  className={`text-left relative bg-app-card border rounded-xl p-3 sm:p-4 md:p-4 lg:p-6 xl:p-8 transition-all duration-200 flex flex-col justify-between h-24 sm:h-28 md:h-36 lg:h-48 xl:h-60 cursor-pointer select-none ${
+                    selectedGame === 'quiz'
+                      ? 'border-emerald-500 ring-4 ring-emerald-500/10 shadow-md bg-emerald-500/5 dark:bg-emerald-500/10'
+                      : 'border-app-border hover:border-emerald-500/30'
+                  }`}
+                >
+                  <div className={`w-8 h-8 md:w-12 md:h-12 lg:w-16 lg:h-16 rounded-lg md:rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 ${
+                    selectedGame === 'quiz' ? 'bg-emerald-500 text-white shadow-md' : 'bg-emerald-500/10 text-emerald-500'
+                  }`}>
+                    <BookOpen className="size-4 md:size-6 lg:size-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs sm:text-sm md:text-sm lg:text-lg xl:text-xl font-black text-app-text whitespace-normal break-words flex flex-wrap items-center gap-1 sm:gap-1.5 leading-tight">
+                      Quick Quiz
+                      {selectedGame === 'quiz' && <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />}
+                    </h3>
+                    <p className="text-[9px] sm:text-xs text-app-muted line-clamp-1 font-semibold mt-0.5">
+                      Multiple Choice Test
+                    </p>
+                  </div>
+                </button>
+
+                {/* 2. Pilipinas Matching */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedGame('matching')}
+                  className={`text-left relative bg-app-card border rounded-xl p-3 sm:p-4 md:p-4 lg:p-6 xl:p-8 transition-all duration-200 flex flex-col justify-between h-24 sm:h-28 md:h-36 lg:h-48 xl:h-60 cursor-pointer select-none ${
+                    selectedGame === 'matching'
+                      ? 'border-ph-blue ring-4 ring-ph-blue/10 shadow-md bg-ph-blue/5 dark:bg-ph-blue/10'
+                      : 'border-app-border hover:border-ph-blue/30'
+                  }`}
+                >
+                  <div className={`w-8 h-8 md:w-12 md:h-12 lg:w-16 lg:h-16 rounded-lg md:rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 ${
+                    selectedGame === 'matching' ? 'bg-ph-blue text-white shadow-md' : 'bg-ph-blue/10 text-ph-blue'
+                  }`}>
+                    <Brain className="size-4 md:size-6 lg:size-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs sm:text-sm md:text-sm lg:text-lg xl:text-xl font-black text-app-text whitespace-normal break-words flex flex-wrap items-center gap-1 sm:gap-1.5 leading-tight">
+                      Matching Pairs
+                      {selectedGame === 'matching' && <span className="w-2 h-2 rounded-full bg-ph-blue animate-pulse inline-block" />}
+                    </h3>
+                    <p className="text-[9px] sm:text-xs text-app-muted line-clamp-1 font-semibold mt-0.5">
+                      Memory Association
+                    </p>
+                  </div>
+                </button>
+
+                {/* 3. Sari-Sari Store AI */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedGame('roleplay')}
+                  className={`text-left relative bg-app-card border rounded-xl p-3 sm:p-4 md:p-4 lg:p-6 xl:p-8 transition-all duration-200 flex flex-col justify-between h-24 sm:h-28 md:h-36 lg:h-48 xl:h-60 cursor-pointer select-none ${
+                    selectedGame === 'roleplay'
+                      ? 'border-ph-red ring-4 ring-ph-red/10 shadow-md bg-ph-red/5 dark:bg-ph-red/10'
+                      : 'border-app-border hover:border-ph-red/30'
+                  }`}
+                >
+                  <div className={`w-8 h-8 md:w-12 md:h-12 lg:w-16 lg:h-16 rounded-lg md:rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 ${
+                    selectedGame === 'roleplay' ? 'bg-ph-red text-white shadow-md' : 'bg-ph-red/10 text-ph-red'
+                  }`}>
+                    <Sparkles className="size-4 md:size-6 lg:size-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs sm:text-sm md:text-sm lg:text-lg xl:text-xl font-black text-app-text whitespace-normal break-words flex flex-wrap items-center gap-1 sm:gap-1.5 leading-tight">
+                      Sari-Sari AI
+                      {selectedGame === 'roleplay' && <span className="w-2 h-2 rounded-full bg-ph-red animate-pulse inline-block" />}
+                    </h3>
+                    <p className="text-[9px] sm:text-xs text-app-muted line-clamp-1 font-semibold mt-0.5">
+                      Interactive Roleplay
+                    </p>
+                  </div>
+                </button>
+
+                {/* 4. Biyaheng Pinoy: Expedition */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedGame('expedition')}
+                  className={`text-left relative bg-app-card border rounded-xl p-3 sm:p-4 md:p-4 lg:p-6 xl:p-8 transition-all duration-200 flex flex-col justify-between h-24 sm:h-28 md:h-36 lg:h-48 xl:h-60 cursor-pointer select-none ${
+                    selectedGame === 'expedition'
+                      ? 'border-amber-500 ring-4 ring-amber-500/10 shadow-md bg-amber-500/5 dark:bg-amber-500/10'
+                      : 'border-app-border hover:border-amber-500/30'
+                  }`}
+                >
+                  <div className={`w-8 h-8 md:w-12 md:h-12 lg:w-16 lg:h-16 rounded-lg md:rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 ${
+                    selectedGame === 'expedition' ? 'bg-amber-500 text-slate-900 shadow-md' : 'bg-amber-500/10 text-amber-500'
+                  }`}>
+                    <Plane className="size-4 md:size-6 lg:size-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs sm:text-sm md:text-sm lg:text-lg xl:text-xl font-black text-app-text whitespace-normal break-words flex flex-wrap items-center gap-1 sm:gap-1.5 leading-tight">
+                      Biyaheng Pinoy
+                      {selectedGame === 'expedition' && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse inline-block" />}
+                    </h3>
+                    <p className="text-[9px] sm:text-xs text-app-muted line-clamp-1 font-semibold mt-0.5">
+                      Archipelago Journey
+                    </p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Step 2: Unified Difficulty & Launch Panel */}
+            <div className="md:col-span-5 flex flex-col bg-app-card border border-app-border rounded-xl p-3 sm:p-4 md:p-4 lg:p-5 xl:p-6 shadow-sm justify-between gap-4 flex-1">
+              <div className="space-y-4 md:space-y-6 flex-1 flex flex-col justify-center">
+                <div className="flex items-center justify-between border-b border-app-border/80 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full bg-ph-blue text-white text-[9px] md:text-[10px] font-black">2</span>
+                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-app-muted">Game Difficulty</span>
+                  </div>
+                  {difficulty === 'easy' && (
+                    <span className="text-[10px] md:text-xs font-black text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 shadow-sm">
+                      {getDifficultyValueLabel()}
+                    </span>
+                  )}
+                  {difficulty === 'medium' && (
+                    <span className="text-[10px] md:text-xs font-black text-ph-blue bg-ph-blue/10 px-2.5 py-1 rounded-full border border-ph-blue/20 shadow-sm">
+                      {getDifficultyValueLabel()}
+                    </span>
+                  )}
+                  {difficulty === 'hard' && (
+                    <span className="text-[10px] md:text-xs font-black text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20 shadow-sm">
+                      {getDifficultyValueLabel()}
+                    </span>
+                  )}
+                  {difficulty === 'expert' && (
+                    <span className="text-[10px] md:text-xs font-black text-rose-500 bg-rose-500/10 px-2.5 py-1 rounded-full border border-rose-500/20 shadow-sm">
+                      {getDifficultyValueLabel()}
+                    </span>
+                  )}
+                </div>
+
+                {/* Difficulty Levels row / grid */}
+                <div className="grid grid-cols-4 gap-1.5 select-none">
+                  {(['easy', 'medium', 'hard', 'expert'] as const).map((lvl) => {
+                    const isSelected = difficulty === lvl;
+                    const cMapSelected = {
+                      easy: 'bg-emerald-500 border-emerald-500 text-white shadow-emerald-500/20 shadow-md scale-102',
+                      medium: 'bg-ph-blue border-ph-blue text-white shadow-ph-blue/20 shadow-md scale-102',
+                      hard: 'bg-amber-500 border-amber-500 text-slate-950 shadow-amber-500/20 shadow-md scale-102',
+                      expert: 'bg-rose-500 border-rose-500 text-white shadow-rose-500/20 shadow-md scale-102',
+                    };
+                    const cMapUnselected = {
+                      easy: 'bg-emerald-500/5 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/10 hover:border-emerald-500/40',
+                      medium: 'bg-ph-blue/5 text-ph-blue border-ph-blue/20 hover:bg-ph-blue/10 hover:border-ph-blue/40',
+                      hard: 'bg-amber-500/5 text-amber-500 border-amber-500/20 hover:bg-amber-500/10 hover:border-amber-500/40',
+                      expert: 'bg-rose-500/5 text-rose-500 border-rose-500/20 hover:bg-rose-500/10 hover:border-rose-500/40',
+                    };
+                    return (
+                      <button
+                        key={lvl}
+                        type="button"
+                        onClick={() => setDifficulty(lvl)}
+                        className={`py-2 px-0.5 md:py-2.5 rounded-xl text-[9px] xs:text-[10px] sm:text-xs md:text-[8px] lg:text-[10px] xl:text-xs font-black uppercase text-center transition-all border ${
+                          isSelected ? cMapSelected[lvl] : cMapUnselected[lvl]
+                        }`}
+                      >
+                        {getDifficultyTitle(lvl)}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Game dynamic scope and parameters details */}
+                <div className="bg-app-bg/50 rounded-lg p-3 md:p-5 lg:p-6 space-y-1 text-[10px] md:text-xs text-app-muted font-medium border border-app-border/40 flex-1 flex flex-col justify-center">
+                  <p className="text-[9px] md:text-xs font-black uppercase tracking-wider text-app-muted mb-1 font-bold">Selected Config Info</p>
+                  <p className="text-app-text text-xs md:text-sm lg:text-base leading-snug md:leading-relaxed">
+                    {selectedGame === 'quiz' ? `Answer check matching terms: ${difficulty === 'easy' ? '5 items' : difficulty === 'medium' ? '10 items' : difficulty === 'hard' ? '15 items' : '20 items'} with detailed explanations.` :
+                     selectedGame === 'matching' ? `Pick matching flip-cards on grid of size: ${difficulty === 'easy' ? '8 pairs' : difficulty === 'medium' ? '16 pairs' : difficulty === 'hard' ? '24 pairs' : '32 pairs'}.` :
+                     selectedGame === 'roleplay' ? `Simulate shopping conversations with AI Tindera helper. Standardized dictionary words saved directly.` :
+                     `Expedition quests across different regions. Focus vocabulary: ${difficulty === 'easy' ? '5 items' : difficulty === 'medium' ? '10 items' : '15 items'}.`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Large CTA Start Button */}
+              <button
+                type="button"
+                onClick={handleStartGame}
+                className="w-full py-3 md:py-4 lg:py-5 bg-ph-blue text-white rounded-xl hover:bg-ph-blue/95 font-bold uppercase tracking-[0.1em] text-[11px] md:text-sm lg:text-base shadow-lg shadow-ph-blue/20 flex items-center justify-center gap-1.5 hover:scale-[1.01] active:scale-95 transition-all text-center select-none cursor-pointer"
+              >
+                Magsimula Na <ChevronRight size={14} className="shrink-0" />
+              </button>
             </div>
           </div>
-
-          {/* Matching Game Card */}
-          <div className="group relative bg-app-card border border-app-border rounded-xl md:rounded-[3rem] p-5 md:p-10 overflow-hidden shadow-xl">
-            <div className="absolute top-0 right-0 p-6 md:p-12 opacity-5">
-              <Gamepad2 size={80} className="md:size-[160px]" />
-            </div>
-            <div className="w-12 h-12 md:w-16 md:h-16 bg-ph-blue rounded-xl md:rounded-2xl flex items-center justify-center mb-4 md:mb-6 shadow-lg shadow-ph-blue/20">
-              <Brain className="text-white md:size-[32px]" size={24} />
-            </div>
-            <h2 className="text-xl md:text-2xl font-black text-app-text mb-2 md:mb-4">Pilipinas Matching</h2>
-            <p className="text-sm md:text-base text-app-muted font-medium mb-6 md:mb-8 leading-relaxed">
-              Classical memory match game using your vocabulary. Match pairs as fast as you can.
-            </p>
-
-            <div className="space-y-4">
-              <p className="text-[10px] font-black text-app-muted uppercase tracking-widest text-center">Select Number of Pairs</p>
-              <div className="grid grid-cols-2 gap-2">
-                {[4, 8, 12, 16].map(n => (
-                  <button 
-                    key={n}
-                    onClick={() => startWithLimit('matching', n)}
-                    className="py-3 bg-app-bg border border-app-border rounded-xl text-xs font-black hover:bg-ph-blue hover:text-white transition-all hover:scale-105 active:scale-95 shadow-sm"
-                  >
-                    {n} Cards
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Roleplay Card */}
-          <motion.div 
-            whileHover={{ y: -5 }}
-            className="group relative bg-app-card border border-app-border rounded-xl md:rounded-[3rem] p-5 md:p-10 overflow-hidden cursor-pointer shadow-xl"
-            onClick={() => setActiveGame('roleplay')}
-          >
-            <div className="absolute top-0 right-0 p-6 md:p-12 opacity-0 md:opacity-5 group-hover:opacity-10 transition-opacity">
-              <MessageSquare size={80} className="md:size-[160px]" />
-            </div>
-            <div className="w-12 h-12 md:w-16 md:h-16 bg-ph-red rounded-xl md:rounded-2xl flex items-center justify-center mb-4 md:mb-6 shadow-lg shadow-ph-red/20">
-              <Sparkles className="text-white md:size-[32px]" size={24} />
-            </div>
-            <h2 className="text-xl md:text-2xl font-black text-app-text mb-2 md:mb-4">Sari-Sari Store AI</h2>
-            <p className="text-sm md:text-base text-app-muted font-medium mb-6 md:mb-8 leading-relaxed">
-              Practice situational Tagalog with a digital Tindera. Master bargaining and daily transactions in a virtual shop.
-            </p>
-            <div className="flex items-center text-ph-red font-black uppercase tracking-widest text-[10px] md:text-sm group-hover:gap-4 gap-2 transition-all">
-              Start Roleplay <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
-            </div>
-          </motion.div>
-
-          {/* Expedition Map Card */}
-          <motion.div 
-            whileHover={{ y: -5 }}
-            className="group relative bg-app-card border border-app-border rounded-[3rem] p-10 overflow-hidden cursor-pointer shadow-xl md:col-span-2"
-            onClick={() => setActiveGame('expedition')}
-          >
-            <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity">
-              <MapIcon size={160} />
-            </div>
-            <div className="w-16 h-16 bg-ph-yellow rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-ph-yellow/20">
-              <Plane className="text-ph-blue" size={32} />
-            </div>
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="max-w-xl">
-                <h2 className="text-2xl font-black text-app-text mb-4">Biyaheng Pinoy: Expedition</h2>
-                <p className="text-app-muted font-medium mb-4 leading-relaxed">
-                  Travel across the archipelago! Each island offers unique regional themes and cultural challenges. Collect souvenirs and unlock new destinations.
-                </p>
-              </div>
-              <div className="flex items-center text-ph-blue font-black uppercase tracking-widest text-sm group-hover:gap-4 gap-2 transition-all shrink-0">
-                Start Journey <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
-              </div>
-            </div>
-          </motion.div>
         </div>
       </div>
     );
@@ -178,26 +312,31 @@ export const Games: React.FC<GamesProps> = ({
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="p-6 border-b border-app-border flex justify-between items-center bg-app-card/50">
+      <div className="p-3 md:p-6 border-b border-app-border flex justify-between items-center bg-app-card/50">
         <button 
           onClick={() => setActiveGame('none')}
-          className="flex items-center gap-2 text-app-muted hover:text-app-text font-black uppercase tracking-widest text-xs transition-all"
+          className="flex items-center gap-1.5 md:gap-2 text-app-muted hover:text-app-text font-black uppercase tracking-widest transition-all"
+          style={{ fontSize: '12px' }}
         >
-          <X size={16} /> Back to Games
+          <X size={14} className="md:size-4" /> Back to Games
         </button>
-        <div className="flex items-center gap-2 px-4 py-2 bg-ph-blue/10 rounded-full">
-          <Trophy className="text-ph-blue" size={16} />
-          <span className="text-ph-blue font-black text-xs uppercase tracking-widest">
+        <div className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-ph-blue/10 rounded-full">
+          <Trophy className="text-ph-blue md:size-4" size={14} />
+          <span className="text-ph-blue font-black text-[9px] md:text-xs uppercase tracking-widest">
             {activeGame === 'matching' ? 'Pilipinas Matching' : activeGame === 'quiz' ? 'Quick Quiz' : activeGame === 'roleplay' ? 'Sari-Sari AI' : 'Biyaheng Pinoy'}
           </span>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden custom-scrollbar">
         {activeGame === 'matching' ? (
-          <MatchingGame words={words} logWordResult={logWordResult} onSetView={onSetView} limit={gameLimit} />
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+            <MatchingGame words={words} logWordResult={logWordResult} onSetView={onSetView} limit={gameLimit} />
+          </div>
         ) : activeGame === 'quiz' ? (
-          <QuizGame words={words} playAudio={playAudio} playingId={playingId} logWordResult={logWordResult} onSetView={onSetView} limit={gameLimit} />
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <QuizGame words={words} playAudio={playAudio} playingId={playingId} logWordResult={logWordResult} onSetView={onSetView} limit={gameLimit} />
+          </div>
         ) : activeGame === 'roleplay' ? (
           <RoleplayGame 
             words={words} 
@@ -232,181 +371,283 @@ const QuizGame: React.FC<{
   onSetView: (view: any) => void,
   limit: number
 }> = ({ words, playAudio, playingId, logWordResult, onSetView, limit }) => {
-  const [currentWord, setCurrentWord] = useState<Word | null>(null);
-  const [options, setOptions] = useState<string[]>([]);
-  const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [gameState, setGameState] = useState<{
+    currentWord: Word | null;
+    options: string[];
+    feedback: 'correct' | 'wrong' | null;
+    selectedOption: string | null;
+  }>({
+    currentWord: null,
+    options: [],
+    feedback: null,
+    selectedOption: null
+  });
+
   const [score, setScore] = useState(0);
   const [questionCount, setQuestionCount] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
 
+  // Use a stable reference to words to avoid flickering or re-triggers
+  const wordsRef = useRef(words);
   useEffect(() => {
-    generateQuestion();
+    wordsRef.current = words;
   }, [words]);
 
   const generateQuestion = () => {
-    if (words.length < 4) return;
-    
+    const currentWords = wordsRef.current;
+    if (currentWords.length < 4) return;
+
     if (questionCount >= limit) {
       setIsFinished(true);
       return;
     }
     
-    // Smart Learning: Pick from the top priority words (sorted by App.tsx)
-    // Favor the first 40% of the list or at least top 8
-    const priorityLimit = Math.max(8, Math.floor(words.length * 0.4));
-    const target = words[Math.floor(Math.random() * Math.min(words.length, priorityLimit))];
+    // 1. Pick target
+    const target = currentWords[Math.floor(Math.random() * currentWords.length)];
+    if (!target || !target.english) return;
+
+    const correctAns = target.english.trim();
+    const distractors = new Set<string>();
+    const seen = new Set<string>();
+    seen.add(correctAns.toLowerCase());
     
-    // Generate 3 random distractors from the entire pool
-    const distractors = words
-      .filter(w => w.id !== target.id)
-      .sort(() => 0.5 - Math.random())
-      .slice(0, 3)
-      .map(w => w.english);
+    // 2. Try to get 3 distractors from word bank
+    const bankPool = [...currentWords]
+      .map(w => w.english.trim())
+      .filter(e => e !== "" && !seen.has(e.toLowerCase()))
+      .sort(() => Math.random() - 0.5);
     
-    // Shuffle options
-    const allOptions = [target.english, ...distractors].sort(() => 0.5 - Math.random());
+    for (const opt of bankPool) {
+      if (distractors.size >= 3) break;
+      distractors.add(opt);
+      seen.add(opt.toLowerCase());
+    }
     
-    setCurrentWord(target);
-    setOptions(allOptions);
-    setFeedback(null);
-    setSelectedOption(null);
+    // 3. Fill with generic fallbacks if still more needed
+    if (distractors.size < 3) {
+      const generic = ["Food", "Water", "House", "Friend", "Happy", "Mountain", "School", "Store", "Brother", "Sister", "Mother", "Father", "Cat", "Dog", "Beautiful", "Quick", "Smart", "Love", "Big", "Small", "Book", "Sun", "Moon", "Tree", "River", "City", "Road"];
+      const shuffledGeneric = generic.sort(() => Math.random() - 0.5);
+      for (const opt of shuffledGeneric) {
+        if (distractors.size >= 3) break;
+        if (!seen.has(opt.toLowerCase())) {
+          distractors.add(opt);
+          seen.add(opt.toLowerCase());
+        }
+      }
+    }
+
+    // 4. Final emergency fallback to ensure EXACTLY 3 distractors
+    let emergencyIdx = 1;
+    while (distractors.size < 3) {
+      const fallback = `Option ${emergencyIdx++}`;
+      if (!seen.has(fallback.toLowerCase())) {
+        distractors.add(fallback);
+        seen.add(fallback.toLowerCase());
+      }
+    }
+
+    const finalOptions = [correctAns, ...Array.from(distractors)];
+    // Shuffle the final list
+    for (let i = finalOptions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [finalOptions[i], finalOptions[j]] = [finalOptions[j], finalOptions[i]];
+    }
+    
+    setGameState({
+      currentWord: target,
+      options: finalOptions,
+      feedback: null,
+      selectedOption: null
+    });
   };
 
+  useEffect(() => {
+    if (words.length >= 4 && !gameState.currentWord && !isFinished) {
+      generateQuestion();
+    }
+  }, [words.length, isFinished, !!gameState.currentWord]);
+
   const handleOptionClick = (option: string) => {
-    if (selectedOption || !currentWord) return;
+    if (gameState.selectedOption || !gameState.currentWord) return;
     
-    setSelectedOption(option);
-    const isCorrect = option === currentWord.english;
-    setFeedback(isCorrect ? 'correct' : 'wrong');
+    const isCorrect = option.toLowerCase() === gameState.currentWord.english.trim().toLowerCase();
     
-    // Log word result for smart learning
-    logWordResult(currentWord.id, isCorrect);
+    setGameState(prev => ({
+      ...prev,
+      selectedOption: option,
+      feedback: isCorrect ? 'correct' : 'wrong'
+    }));
     
+    logWordResult(gameState.currentWord.id, isCorrect);
     if (isCorrect) setScore(prev => prev + 1);
     setQuestionCount(prev => prev + 1);
 
     setTimeout(() => {
       generateQuestion();
-    }, 1500);
+    }, 1000);
   };
 
   if (words.length < 4) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-10 text-center">
-        <div className="w-20 h-20 bg-emerald-500/10 rounded-3xl flex items-center justify-center mb-6">
-          <BookOpen className="text-emerald-500" size={40} />
+      <div className="flex flex-col items-center justify-center p-8 text-center min-h-[400px]">
+        <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-4">
+          <BookOpen className="text-emerald-500" size={32} />
         </div>
-        <h3 className="text-2xl font-black text-app-text mb-4">Insufficient Vocabulary</h3>
-        <p className="text-app-muted max-w-sm mb-8">
+        <h3 className="text-xl font-black text-app-text mb-2">Insufficient Vocabulary</h3>
+        <p className="text-app-muted max-w-xs text-sm mb-6">
           You need at least 4 words in your Vocabulary Bank to generate a quiz. 
         </p>
-        <div className="flex flex-col gap-4">
-          <button 
-            onClick={() => onSetView('explorer')}
-            className="flex items-center gap-3 px-8 py-4 bg-emerald-500 text-white rounded-full font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg"
-          >
-            <Sparkles size={18} /> Use Word Explorer
-          </button>
-          <p className="text-xs text-app-muted font-bold">Or earn words in the Expedition Game!</p>
-        </div>
+        <button 
+          onClick={() => onSetView('explorer')}
+          className="flex items-center gap-2 px-6 py-3 bg-emerald-500 text-white rounded-full font-black uppercase tracking-widest text-xs hover:scale-105 transition-all shadow-lg"
+        >
+          <Sparkles size={14} /> Use Word Explorer
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-10">
-      <div className="flex justify-between items-center mb-10">
-        <div className="space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-app-muted">Vocabulary Quiz</p>
-          <h2 className="text-3xl font-black text-app-text">Quick Quiz</h2>
-        </div>
-        <div className="flex gap-4">
-          <div className="bg-app-card border border-app-border px-6 py-3 rounded-2xl">
-            <span className="text-[10px] font-black uppercase tracking-widest text-app-muted block">Score</span>
-            <span className="text-xl font-black text-app-text">{score} / {questionCount}</span>
+    <div 
+      className="max-w-none px-4 md:px-10 lg:px-16 py-0 flex flex-col flex-1 w-full overflow-hidden"
+    >
+      {/* Quiz Header - Extremely compact */}
+      <div className="flex flex-col shrink-0 pt-2">
+        <div 
+          className="flex justify-between items-end px-1 pb-2"
+          style={{ minHeight: '48px' }}
+        >
+          <div className="flex flex-col">
+            <p 
+              className="font-black uppercase tracking-[0.2em] text-app-muted mb-0.5"
+              style={{ fontSize: '10px', lineHeight: '1' }}
+            >
+              Vocabulary Quiz
+            </p>
+            <h2 className="text-base font-black text-app-text leading-none uppercase tracking-tight">Quick Quiz</h2>
           </div>
-          <button 
-            onClick={() => { setScore(0); setQuestionCount(0); generateQuestion(); }}
-            className="p-4 bg-app-card border border-app-border hover:border-emerald-500/30 rounded-2xl text-app-muted hover:text-emerald-500 transition-all"
+          
+          <div 
+            className="flex items-center gap-2"
           >
-            <RotateCcw size={24} />
-          </button>
+            <div 
+              className="bg-app-card border border-app-border rounded-lg px-2.5 py-1 flex flex-col items-center justify-center min-w-[60px]"
+              style={{ height: '36px' }}
+            >
+              <span 
+                className="font-black uppercase tracking-widest text-app-muted"
+                style={{ fontSize: '9px', lineHeight: '1' }}
+              >
+                Score
+              </span>
+              <span 
+                className="font-black text-app-text"
+                style={{ fontSize: '13px', lineHeight: '1.2' }}
+              >
+                {score}/{questionCount}
+              </span>
+            </div>
+            <button 
+              onClick={() => { setScore(0); setQuestionCount(0); setIsFinished(false); generateQuestion(); }}
+              className="p-1 bg-app-card border border-app-border hover:border-ph-blue/30 rounded-lg text-app-muted hover:text-ph-blue transition-all flex items-center justify-center shrink-0"
+              style={{ width: '36px', height: '36px' }}
+            >
+              <RotateCcw size={18} />
+            </button>
+          </div>
         </div>
+
+        <div className="h-[1px] bg-app-border/30" />
       </div>
 
       <AnimatePresence mode="wait">
         {isFinished ? (
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
+            key="finished"
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-app-card border-2 border-emerald-500 rounded-[3rem] p-16 text-center shadow-2xl relative overflow-hidden"
+            className="flex-1 flex flex-col items-center justify-center p-4 text-center"
           >
-            <div className="absolute inset-0 bg-emerald-500/5" />
-            <Trophy className="text-emerald-500 mx-auto mb-8" size={80} />
-            <h3 className="text-4xl font-black text-app-text mb-4">Quiz Complete!</h3>
-            <p className="text-xl text-app-muted font-bold mb-10">You got {score} out of {limit} correct.</p>
-            <div className="flex gap-4 justify-center">
-              <button 
-                onClick={() => { setScore(0); setQuestionCount(0); setIsFinished(false); generateQuestion(); }}
-                className="px-10 py-5 bg-emerald-500 text-white rounded-full font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg"
-              >
-                Play Again
-              </button>
-              <button 
-                onClick={() => onSetView('games')}
-                className="px-10 py-5 bg-app-bg text-app-text border-2 border-app-border rounded-full font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
-              >
-                Exit Game
-              </button>
+            <div className="bg-app-card border-2 border-emerald-500 rounded-3xl p-5 md:p-8 shadow-xl flex flex-col items-center w-full max-w-sm">
+              <Trophy className="text-emerald-500 mb-2 md:mb-4" size={44} />
+              <h3 className="text-xl md:text-2xl font-black text-app-text mb-1 md:mb-2">Mahusay!</h3>
+              <p className="text-sm md:text-base text-app-muted font-bold mb-4 md:mb-8">You finished with {score} points.</p>
+              <div className="flex flex-col gap-2.5 w-full">
+                <button 
+                  onClick={() => { setScore(0); setQuestionCount(0); setIsFinished(false); generateQuestion(); }}
+                  className="w-full py-3 bg-emerald-500 text-white rounded-xl font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg text-xs"
+                >
+                  Play Again
+                </button>
+                <button 
+                  onClick={() => onSetView('games')}
+                  className="w-full py-3 bg-app-bg text-app-text border-2 border-app-border rounded-xl font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all text-xs"
+                >
+                  Exit Game
+                </button>
+              </div>
             </div>
           </motion.div>
-        ) : currentWord && (
+        ) : gameState.currentWord && (
           <motion.div 
-            key={currentWord.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="space-y-12"
+            key={gameState.currentWord.id}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.02 }}
+            className="flex-1 flex flex-col gap-3 md:gap-4 py-2 md:py-4 overflow-hidden"
           >
-            <div className="bg-app-card border-2 border-app-border rounded-[3rem] p-16 text-center shadow-xl relative group/card">
-              <span className="text-xs font-black text-ph-blue uppercase tracking-[0.3em] mb-4 block">What is the English for:</span>
-              <div className="flex items-center justify-center gap-6">
-                <h3 className="text-5xl font-black text-red-600 dark:text-yellow-400">{currentWord.tagalog}</h3>
-                <button 
-                  onClick={() => playAudio(currentWord.tagalog, `quiz-${currentWord.id}`)}
-                  disabled={playingId !== null}
-                  className={`p-4 rounded-full transition-all ${playingId === `quiz-${currentWord.id}` ? 'bg-ph-blue text-white' : 'bg-ph-blue/5 text-ph-blue hover:bg-ph-blue hover:text-white'}`}
+            {/* Question Card - Streamlined */}
+            <div 
+              className="bg-slate-900/40 dark:bg-slate-900/60 border border-ph-blue/20 rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-10 lg:p-12 text-center shadow-lg relative flex flex-col justify-center items-center flex-1 min-h-[160px] md:min-h-[250px]"
+            >
+              <span 
+                className="font-black text-ph-blue uppercase tracking-[0.2em] mb-1 md:mb-3 text-[10px] md:text-sm lg:text-lg"
+              >
+                What is the English for:
+              </span>
+              <div 
+                className="flex flex-col items-center gap-3 md:gap-6 justify-center"
+              >
+                <h3 
+                  className="font-black text-ph-yellow drop-shadow-sm flex items-center leading-tight text-3xl md:text-5xl lg:text-6xl"
                 >
-                  {playingId === `quiz-${currentWord.id}` ? <Loader2 size={24} className="animate-spin" /> : <Volume2 size={24} />}
+                  {gameState.currentWord.tagalog}
+                </h3>
+                <button 
+                   onClick={() => playAudio(gameState.currentWord!.tagalog, `quiz-${gameState.currentWord!.id}`)}
+                   disabled={playingId !== null}
+                   className={`p-3 md:p-4 rounded-full transition-all flex items-center justify-center ${playingId === `quiz-${gameState.currentWord!.id}` ? 'bg-ph-blue text-white shadow-md' : 'text-ph-blue hover:bg-ph-blue/10 bg-ph-blue/5'}`}
+                >
+                  {playingId === `quiz-${gameState.currentWord!.id}` ? <Loader2 className="animate-spin size-5 md:size-8" /> : <Volume2 className="size-6 md:size-10 lg:size-12" />}
                 </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {options.map((opt, i) => (
-                <motion.button
-                  key={i}
-                  whileHover={{ scale: selectedOption ? 1 : 1.02 }}
-                  whileTap={{ scale: selectedOption ? 1 : 0.98 }}
+            {/* Answer Grid - STRICT 2 COLUMNS */}
+            <div className="grid grid-cols-2 gap-3 md:gap-5 w-full shrink-0 h-[160px] md:h-[280px] lg:h-[350px] xl:h-[420px] mb-2 md:mb-6">
+              {gameState.options.map((opt, i) => (
+                <button
+                  key={`${gameState.currentWord!.id}-${opt}-${i}`}
                   onClick={() => handleOptionClick(opt)}
-                  className={`p-8 rounded-3xl font-black text-lg transition-all border-4 text-left relative overflow-hidden ${
-                    selectedOption === opt
-                      ? feedback === 'correct'
-                        ? 'bg-emerald-500 border-emerald-600 text-white shadow-lg shadow-emerald-500/30'
-                        : 'bg-ph-red border-ph-red/80 text-white shadow-lg shadow-ph-red/30'
-                      : selectedOption && opt === currentWord.english
+                  disabled={!!gameState.selectedOption}
+                  className={`p-3 md:p-6 lg:p-8 rounded-xl md:rounded-3xl font-black transition-all border-2 flex items-center justify-center text-center w-full break-words relative overflow-hidden h-full shadow-md text-xs sm:text-sm md:text-base lg:text-xl xl:text-2xl ${
+                    gameState.selectedOption === opt
+                      ? gameState.feedback === 'correct'
+                        ? 'bg-emerald-500 border-emerald-600 text-white shadow-emerald-500/20 shadow-lg scale-[1.01]'
+                        : 'bg-ph-red border-ph-red/80 text-white shadow-ph-red/20 shadow-lg scale-[0.99]'
+                      : gameState.selectedOption && opt.toLowerCase() === gameState.currentWord!.english.trim().toLowerCase()
                         ? 'bg-emerald-500/20 border-emerald-500 text-emerald-600'
-                        : 'bg-app-card border-app-border hover:border-ph-blue/30 text-app-text'
+                        : 'bg-app-card border-app-border hover:border-ph-blue/40 text-app-text hover:text-ph-blue shadow-md hover:scale-[1.01] active:scale-95'
                   }`}
+                  style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
                 >
-                  <div className="relative z-10 flex items-center justify-between">
-                    <span>{opt}</span>
-                    {selectedOption === opt && (
-                      feedback === 'correct' ? <Trophy size={24} /> : <X size={24} />
-                    )}
-                  </div>
-                </motion.button>
+                  <span className="leading-tight line-clamp-2">{opt}</span>
+                  {gameState.selectedOption === opt && (
+                    <div className="absolute top-3 right-3">
+                      {gameState.feedback === 'correct' ? <Trophy className="text-white/40 size-4 md:size-6" /> : <X className="text-white/40 size-4 md:size-6" />}
+                    </div>
+                  )}
+                </button>
               ))}
             </div>
           </motion.div>
@@ -493,6 +734,16 @@ const MatchingGame: React.FC<{
     }
   };
 
+  const totalCards = cards.length;
+  let colsClass = "grid-cols-3 md:grid-cols-4";
+  if (totalCards > 24) {
+    colsClass = "grid-cols-4 sm:grid-cols-6 lg:grid-cols-8";
+  } else if (totalCards > 12) {
+    colsClass = "grid-cols-4 sm:grid-cols-5 lg:grid-cols-6";
+  } else {
+    colsClass = "grid-cols-3 sm:grid-cols-4";
+  }
+
   if (words.length < 4) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-10 text-center">
@@ -516,88 +767,92 @@ const MatchingGame: React.FC<{
     );
   }
 
+  if (isWon) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-4 text-center h-full max-w-md mx-auto">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-app-card border-2 border-ph-blue rounded-[2rem] p-6 md:p-10 text-center shadow-2xl relative overflow-hidden w-full"
+        >
+          <div className="absolute inset-0 bg-ph-blue/5" />
+          <Trophy className="text-ph-blue mx-auto mb-4" size={56} />
+          <h3 className="text-2xl font-black text-app-text mb-2">Mahusay!</h3>
+          <p className="text-sm md:text-base font-bold text-app-muted mb-6 md:mb-8">You matched {limit} sets in {moves} moves.</p>
+          <div className="flex flex-col gap-2.5 w-full">
+            <button 
+              onClick={initGame}
+              className="w-full py-4 bg-ph-blue text-white rounded-2xl font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg text-xs"
+            >
+              Play Again
+            </button>
+            <button 
+              onClick={() => onSetView('games')}
+              className="w-full py-4 bg-app-bg text-app-text border-2 border-app-border rounded-2xl font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all text-xs"
+            >
+              Exit Game
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-4xl mx-auto p-10">
-      <div className="flex justify-between items-center mb-10">
-        <div className="space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-app-muted">Recall Game</p>
-          <h2 className="text-3xl font-black text-app-text">Memory Match</h2>
+    <div className="max-w-none px-4 md:px-10 lg:px-16 p-3 md:p-6 h-full flex flex-col overflow-hidden w-full overflow-y-auto">
+      <div className="flex justify-between items-center mb-3 md:mb-6 shrink-0">
+        <div className="space-y-0.5">
+          <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-app-muted">Recall Game</p>
+          <h2 className="text-base md:text-2xl font-black text-app-text leading-tight">Memory Match</h2>
         </div>
-        <div className="flex gap-4">
-          <div className="bg-app-card border border-app-border px-6 py-3 rounded-2xl">
-            <span className="text-[10px] font-black uppercase tracking-widest text-app-muted block">Moves</span>
-            <span className="text-xl font-black text-app-text">{moves}</span>
+        <div className="flex gap-2 items-center">
+          <div className="bg-app-card border border-app-border px-3 py-1 rounded-xl">
+            <span className="text-[8px] font-black uppercase tracking-widest text-app-muted block">Moves</span>
+            <span className="text-xs md:text-sm font-black text-app-text">{moves}</span>
           </div>
           <button 
             onClick={initGame}
-            className="p-4 bg-app-card border border-app-border hover:border-ph-blue/30 rounded-2xl text-app-muted hover:text-ph-blue transition-all"
+            className="p-1.5 bg-app-card border border-app-border hover:border-ph-blue/30 rounded-xl text-app-muted hover:text-ph-blue transition-all"
           >
-            <RotateCcw size={24} />
+            <RotateCcw size={16} />
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 md:grid-cols-4 gap-6">
-        {cards.map((card: any) => (
-          <div 
-            key={card.gameId}
-            onClick={() => handleCardClick(card.gameId)}
-            className="aspect-square relative cursor-pointer"
-          >
-            <motion.div 
-              animate={{ rotateY: card.flipped || card.matched ? 180 : 0 }}
-              transition={{ type: "spring", stiffness: 260, damping: 20 }}
-              className="w-full h-full preserve-3d"
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-6">
+        <div className={`grid ${colsClass} gap-2 md:gap-4 lg:gap-6`}>
+          {cards.map((card: any) => (
+            <div 
+              key={card.gameId}
+              onClick={() => handleCardClick(card.gameId)}
+              className="aspect-[4/3] md:aspect-square relative cursor-pointer"
             >
-              {/* Front (Hidden) */}
-              <div className="absolute inset-0 backface-hidden bg-app-card border-2 border-app-border rounded-3xl flex items-center justify-center group overflow-hidden">
-                <div className="absolute inset-0 bg-ph-blue/5 scale-0 group-hover:scale-100 transition-transform duration-500 rounded-full" />
-                <div className="relative text-ph-blue opacity-50 group-hover:opacity-100 transition-opacity">
-                  <Gamepad2 size={32} />
+              <motion.div 
+                animate={{ rotateY: card.flipped || card.matched ? 180 : 0 }}
+                transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                className="w-full h-full preserve-3d"
+              >
+                {/* Front (Hidden) */}
+                <div className="absolute inset-0 backface-hidden bg-app-card border-2 border-app-border rounded-xl md:rounded-3xl flex items-center justify-center group overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                  <div className="absolute inset-0 bg-ph-blue/5 scale-0 group-hover:scale-100 transition-transform duration-500 rounded-full" />
+                  <div className="relative text-ph-blue opacity-50 group-hover:opacity-100 transition-opacity">
+                    <Gamepad2 className="size-5 md:size-10 lg:size-12" />
+                  </div>
                 </div>
-              </div>
-              
-              {/* Back (Visible Content) */}
-              <div 
-                className={`absolute inset-0 backface-hidden rotate-y-180 rounded-3xl flex items-center justify-center p-4 text-center border-2 transition-colors ${card.matched ? 'bg-ph-blue/20 border-ph-blue' : 'bg-app-card border-app-border'}`}
-              >
-                <p className={`text-sm font-black break-words ${card.matched ? 'text-ph-blue' : (card.type === 'tagalog' ? 'text-red-600 dark:text-yellow-400' : 'text-app-text')}`}>
-                  {card.content}
-                </p>
-              </div>
-            </motion.div>
-          </div>
-        ))}
-      </div>
-
-      <AnimatePresence>
-        {isWon && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="mt-12 bg-app-card border-2 border-ph-blue rounded-[3rem] p-12 text-center shadow-2xl relative overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-ph-blue/5" />
-            <Trophy className="text-ph-blue mx-auto mb-6" size={64} />
-            <h3 className="text-3xl font-black text-app-text mb-4">Mahusay! (Excellent!)</h3>
-            <p className="text-lg font-bold text-app-muted mb-10">You matched {limit} sets in {moves} moves.</p>
-            <div className="flex gap-4 justify-center">
-              <button 
-                onClick={initGame}
-                className="px-10 py-5 bg-ph-blue text-white rounded-full font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg"
-              >
-                Play Again
-              </button>
-              <button 
-                onClick={() => onSetView('games')}
-                className="px-10 py-5 bg-app-bg text-app-text border-2 border-app-border rounded-full font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
-              >
-                Exit Game
-              </button>
+                
+                {/* Back (Visible Content) */}
+                <div 
+                  className={`absolute inset-0 backface-hidden rotate-y-180 rounded-xl md:rounded-3xl flex items-center justify-center p-2 md:p-5 text-center border-2 transition-all ${card.matched ? 'bg-ph-blue/20 border-ph-blue shadow-inner scale-98' : 'bg-app-card border-app-border shadow-md'}`}
+                >
+                  <p className={`text-[9px] sm:text-xs md:text-base lg:text-lg xl:text-xl font-black break-words leading-tight ${card.matched ? 'text-ph-blue filter blur-[0.5px] opacity-75' : (card.type === 'tagalog' ? 'text-red-500 dark:text-yellow-400' : 'text-app-text')}`}>
+                    {card.content}
+                  </p>
+                </div>
+              </motion.div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
@@ -746,7 +1001,7 @@ const RoleplayGame: React.FC<{
         </div>
 
         <div className="p-6 md:p-10 bg-app-card border-t border-app-border">
-          <form onSubmit={handleSend} className="relative max-w-4xl mx-auto">
+          <form onSubmit={handleSend} className="relative max-w-none w-full">
             <input 
               type="text" 
               value={input}
@@ -779,17 +1034,17 @@ const RoleplayGame: React.FC<{
 
       {extractedWords.length > 0 && (
         <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="w-full md:w-80 bg-app-card border-l border-app-border p-8 overflow-y-auto"
+          initial={{ opacity: 0, y: 100 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute inset-x-0 bottom-0 md:static md:w-80 h-[45%] md:h-full bg-app-card border-t md:border-t-0 md:border-l border-app-border p-6 md:p-8 overflow-y-auto z-40 rounded-t-3xl md:rounded-none shadow-[0_-10px_25px_-5px_rgba(0,0,0,0.1)] md:shadow-none"
         >
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-black text-app-text">Neural Catch</h3>
+          <div className="flex items-center justify-between mb-4 md:mb-8 shrink-0">
+            <h3 className="text-base md:text-xl font-black text-app-text">Neural Catch</h3>
             <button onClick={() => setExtractedWords([])} className="text-app-muted hover:text-app-text">
               <X size={20} />
             </button>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {extractedWords.map((w, idx) => (
               <div key={idx} className="p-4 bg-app-bg border border-app-border rounded-2xl group relative overflow-hidden">
                 <p className="text-red-600 dark:text-yellow-400 font-black">{w.tagalog}</p>
@@ -1200,13 +1455,30 @@ const ExpeditionGame: React.FC<{
     const targets = shuffled.slice(0, count);
     
     for (const target of targets) {
-      // Generate distractors from the full pool
-      const others = allRegionalWords
-        .filter(w => w.tagalog.toLowerCase() !== target.tagalog.toLowerCase())
-        .sort(() => 0.5 - Math.random())
-        .slice(0, 2);
+      // Generate distractors using a Set for uniqueness
+      const uniqueOpts = new Set<string>();
+      uniqueOpts.add(target.tagalog);
       
-      const options = [target.tagalog, ...others.map(o => o.tagalog)].sort(() => 0.5 - Math.random());
+      const distractors = allRegionalWords
+        .filter(w => w.tagalog.toLowerCase() !== target.tagalog.toLowerCase())
+        .sort(() => 0.5 - Math.random());
+
+      for (const d of distractors) {
+        if (uniqueOpts.size >= 4) break;
+        uniqueOpts.add(d.tagalog);
+      }
+      
+      // Fallback if needed
+      const fallbackTags = ["Kaibigan", "Bahay", "Tubig", "Pagkain", "Tindahan", "Kalsada", "Pamilya", "Masaya", "Malamig", "Maganda"];
+      let fbIdx = 0;
+      while (uniqueOpts.size < 4 && fbIdx < fallbackTags.length) {
+        const fb = fallbackTags[fbIdx++];
+        if (fb.toLowerCase() !== target.tagalog.toLowerCase()) {
+          uniqueOpts.add(fb);
+        }
+      }
+      
+      const options = Array.from(uniqueOpts).sort(() => 0.5 - Math.random());
       
       queue.push({
         english: target.english,
@@ -1296,7 +1568,7 @@ const ExpeditionGame: React.FC<{
         <div 
           ref={containerRef}
           onWheel={handleWheel}
-          className="relative w-full h-full lg:max-w-2xl lg:aspect-[4/5] bg-sky-50 dark:bg-slate-900 rounded-none lg:rounded-[3rem] shadow-inner border-0 lg:border-8 border-white dark:border-slate-800 overflow-hidden isolate touch-none"
+          className="relative w-full h-full bg-sky-50 dark:bg-slate-900 rounded-none lg:rounded-[3rem] shadow-inner border-0 lg:border-8 border-white dark:border-slate-800 overflow-hidden isolate touch-none"
         >
           {/* Zoom Controls */}
                 <div className="absolute top-4 right-4 lg:top-6 lg:right-6 z-50 flex flex-col gap-2">
@@ -1438,64 +1710,68 @@ const ExpeditionGame: React.FC<{
           opacity: 1
         }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className={`fixed lg:relative inset-0 lg:inset-auto z-[60] lg:z-0 w-full lg:w-[400px] lg:h-full bg-app-card lg:border-l border-app-border flex flex-col p-6 lg:p-10 overflow-y-auto ${!selectedLocation ? 'pointer-events-none lg:pointer-events-auto' : 'pointer-events-auto'}`}
+        className={`fixed lg:relative inset-0 lg:inset-auto z-[60] lg:z-0 w-full lg:w-[400px] lg:h-full bg-app-card lg:border-l border-app-border flex flex-col p-4 lg:p-6 overflow-hidden ${!selectedLocation ? 'pointer-events-none lg:pointer-events-auto' : 'pointer-events-auto'}`}
       >
         <AnimatePresence mode="wait">
           {selectedLocation ? (
             <motion.div 
-              key={selectedLocation.id}
+              key={`${selectedLocation.id}-${challengeStatus}`}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-6 lg:space-y-8"
+              className="flex flex-col h-full w-full overflow-hidden justify-between"
             >
-              {/* Back button for mobile */}
-              <button 
-                onClick={() => setSelectedLocation(null)}
-                className="lg:hidden flex items-center gap-2 text-ph-blue font-black text-[10px] uppercase tracking-widest mb-4 hover:opacity-70 transition-opacity"
-              >
-                <ChevronLeft size={16} /> Back to Map
-              </button>
-              <div className={`w-12 h-12 lg:w-16 lg:h-16 rounded-2xl lg:rounded-[2rem] flex items-center justify-center text-white shadow-xl bg-gradient-to-br ${selectedLocation.colorGradient}`}>
-                <GraduationCap size={24} className="lg:size-8" />
-              </div>
+              {challengeStatus === 'exploring' && (
+                <div className="flex-1 flex flex-col h-full justify-between overflow-hidden">
+                  {/* Info Header */}
+                  <div className="space-y-3 shrink-0 pb-2 border-b border-app-border/30">
+                    <div className="flex justify-between items-center">
+                      <button 
+                        onClick={() => setSelectedLocation(null)}
+                        className="flex items-center gap-1.5 text-ph-blue font-black text-[10px] uppercase tracking-widest hover:opacity-75 transition-opacity"
+                      >
+                        <ChevronLeft size={16} /> Back to Map
+                      </button>
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white bg-gradient-to-br ${selectedLocation.colorGradient}`}>
+                        <GraduationCap size={16} />
+                      </div>
+                    </div>
+                    <div>
+                      <h2 className="text-xl md:text-2xl font-black text-app-text tracking-tight shrink-0 whitespace-nowrap overflow-hidden text-ellipsis">{selectedLocation.name}</h2>
+                      <p className="text-ph-blue font-black uppercase tracking-[0.25em] text-[9px] mt-0.5">{selectedLocation.theme}</p>
+                    </div>
+                  </div>
 
-              <div>
-                <h2 className="text-3xl lg:text-4xl font-black text-app-text tracking-tighter leading-tight">{selectedLocation.name}</h2>
-                <p className="text-ph-blue font-black uppercase tracking-[0.2em] text-[9px] lg:text-[10px] mt-2">{selectedLocation.theme}</p>
-              </div>
+                  {/* Scrollable Container for Info */}
+                  <div className="flex-1 overflow-y-auto no-scrollbar py-3 space-y-4 pr-1">
+                    <div className="p-3 bg-app-bg/50 rounded-xl border border-app-border italic text-[11px] leading-relaxed text-app-text">
+                      {selectedLocation.description}
+                    </div>
 
-              <div className="p-4 lg:p-6 bg-app-bg/50 rounded-2xl lg:rounded-3xl border border-app-border relative italic shadow-inner">
-                <Sparkles size={20} className="absolute -top-3 -right-3 text-ph-yellow" />
-                <p className="text-sm lg:text-base text-app-text font-medium leading-relaxed">
-                  {selectedLocation.description}
-                </p>
-              </div>
+                    <div className="space-y-1.5">
+                      <h4 className="text-[9px] font-black uppercase tracking-widest text-app-muted flex items-center gap-1.5">
+                         <MessageSquare size={10} /> Local Guide Greet
+                      </h4>
+                      <div className={`p-4 rounded-xl font-bold text-xs leading-normal border text-red-600 dark:text-yellow-400 bg-app-card border-app-border ${isTalking ? 'bg-ph-blue/5 border-ph-blue/20 animate-pulse' : ''}`}>
+                         {guideMessage || `Mabuhay! Welcome to ${selectedLocation.name}.`}
+                      </div>
+                    </div>
 
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-                   <MessageSquare size={12} /> Local Guide Message
-                </h4>
-                <div className={`p-6 rounded-[2rem] shadow-sm font-bold leading-relaxed border-2 border-transparent transition-all text-red-600 dark:text-yellow-400 ${isTalking ? 'bg-ph-blue/5 border-ph-blue/20 animate-pulse' : 'bg-app-card border-app-border'}`}>
-                   {guideMessage || "Click the pin to hear from your local guide!"}
-                </div>
-              </div>
+                    <div className="space-y-1.5">
+                       <h4 className="text-[9px] font-black uppercase tracking-widest text-app-muted flex items-center gap-1.5">
+                          <Trophy size={10} /> Regional Trivia
+                       </h4>
+                       <p className="text-[11px] text-app-muted leading-relaxed bg-ph-yellow/5 p-4 rounded-xl border border-ph-yellow/15 font-medium">
+                          {selectedLocation.trivia}
+                       </p>
+                    </div>
 
-              <div className="space-y-4 pt-6">
-                 <h4 className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-                    <Trophy size={12} /> Regional Trivia
-                 </h4>
-                 <p className="text-xs text-app-muted font-medium bg-ph-yellow/10 p-5 rounded-2xl border border-ph-yellow/20">
-                    {selectedLocation.trivia}
-                 </p>
-              </div>
-
-              {/* Regional Vocabulary List */}
-              <div className="space-y-4 pt-6">
-                 <h4 className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-                    <BookOpen size={12} /> Regional Vocabulary
-                 </h4>
-                 <div className="grid grid-cols-2 gap-2">
+                    {/* Compact regional vocabulary list */}
+                    <div className="space-y-1.5 flex-1 min-h-0 overflow-hidden flex flex-col">
+                       <h4 className="text-[9px] font-black uppercase tracking-widest text-app-muted flex items-center gap-1.5 shrink-0">
+                          <BookOpen size={10} /> Regional Vocabulary
+                       </h4>
+                       <div className="grid grid-cols-2 gap-1.5 overflow-y-auto pr-1 no-scrollbar flex-grow min-h-0">
                     {(selectedLocation as any).regionalWords?.map((w: any, idx: number) => {
                       const isSaved = userWords.some(uw => uw.tagalog.toLowerCase() === w.tagalog.toLowerCase());
                       return (
@@ -1523,35 +1799,40 @@ const ExpeditionGame: React.FC<{
               </div>
 
               {/* Difficulty Selection */}
-              <div className="space-y-4 pt-6">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-app-muted flex items-center gap-2">
-                   <Brain size={12} /> Challenge Difficulty
-                </h4>
-                <div className="grid grid-cols-3 gap-2">
-                  {[limit, limit * 2, limit * 3].map((lvl) => (
-                    <button
-                      key={lvl}
-                      onClick={() => setLocalLimit(lvl)}
-                      className={`py-3 rounded-xl text-[10px] font-black transition-all border ${
-                        localLimit === lvl 
-                          ? 'bg-ph-blue text-white border-ph-blue shadow-lg scale-105' 
-                          : 'bg-app-bg text-app-text border-app-border hover:border-ph-blue/50'
-                      }`}
-                    >
-                      {lvl === limit ? 'Focus' : lvl === limit * 2 ? 'Marathon' : 'Expert'} ({lvl} Words)
-                    </button>
-                  ))}
-                </div>
               </div>
 
-              {challengeStatus === 'exploring' && (
-                <button 
-                  onClick={handleAcceptChallenge}
-                  className="w-full py-5 bg-ph-blue text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-xl shadow-ph-blue/20 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                >
-                   Accept Challenge <ChevronRight size={18} />
-                </button>
-              )}
+              {/* Pinned Footer (Difficulty & Accept Challenge) */}
+              <div className="shrink-0 space-y-2 pt-2 border-t border-app-border">
+                <div className="space-y-1">
+                  <p className="text-[8px] font-black text-app-muted uppercase tracking-widest text-center">Challenge Difficulty</p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[limit, limit * 2, limit * 3].map((lvl) => (
+                      <button
+                        key={lvl}
+                        onClick={() => setLocalLimit(lvl)}
+                        className={`py-1.5 rounded-lg text-[9px] font-black transition-all border ${
+                          localLimit === lvl 
+                            ? 'bg-ph-blue text-white border-ph-blue shadow-md scale-105' 
+                            : 'bg-app-bg text-app-text border-app-border hover:border-ph-blue/30'
+                        }`}
+                      >
+                        {lvl === limit ? 'Focus' : lvl === limit * 2 ? 'Marathon' : 'Expert'} ({lvl} Words)
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {challengeStatus === 'exploring' && (
+                  <button 
+                    onClick={handleAcceptChallenge}
+                    className="w-full py-3 bg-ph-blue text-white rounded-xl font-black uppercase tracking-[0.1em] text-xs shadow-lg shadow-ph-blue/15 flex items-center justify-center gap-1 hover:scale-[1.01] active:scale-95 transition-all"
+                  >
+                     Accept Challenge <ChevronRight size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
               {challengeStatus === 'learning' && quizQueue[learningIdx] && (
                 <div className="space-y-6 pt-6 border-t border-app-border">

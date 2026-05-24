@@ -628,6 +628,90 @@ app.get("/api/admin/database/backup", isAdmin, async (req: any, res) => {
   }
 });
 
+// Database Restore (Encrypted Neural JSON Snapshot Upload)
+app.post("/api/admin/database/restore", isAdmin, express.raw({ type: '*/*', limit: '10mb' }), async (req: any, res) => {
+  try {
+    const backupBuffer = req.body;
+    if (!backupBuffer || backupBuffer.length < (12 + 16)) {
+      return res.status(400).json({ error: "Invalid backup file structure or empty backup payload." });
+    }
+
+    const iv = backupBuffer.subarray(0, 12);
+    const authTag = backupBuffer.subarray(12, 12 + 16);
+    const encryptedData = backupBuffer.subarray(12 + 16);
+
+    const ENCRYPTION_KEY = crypto.scryptSync(JWT_SECRET, 'gabay-salt', 32); 
+    const decipher = crypto.createDecipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
+    decipher.setAuthTag(authTag);
+
+    const decrypted = Buffer.concat([decipher.update(encryptedData), decipher.final()]);
+    const parsedData = JSON.parse(decrypted.toString());
+
+    if (parsedData.protocol !== "GABAY_NEURAL_SNAPSHOT_V3_SQLITE") {
+      return res.status(400).json({ error: "Invalid snapshot protocol or incompatible revision file." });
+    }
+
+    const db = getDb();
+    
+    db.transaction(() => {
+      // Clear data safely
+      db.prepare('DELETE FROM Word').run();
+      db.prepare('DELETE FROM User').run();
+      db.prepare('DELETE FROM SystemLog').run();
+      db.prepare('DELETE FROM SecurityConfig').run();
+
+      // Users restore
+      if (parsedData.users && Array.isArray(parsedData.users)) {
+        const insertUser = db.prepare(`
+          INSERT INTO User (id, email, name, role, accessToken, refreshToken, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        for (const u of parsedData.users) {
+          insertUser.run(u.id, u.email, u.name, u.role, u.accessToken, u.refreshToken, u.createdAt);
+        }
+      }
+
+      // Words restore
+      if (parsedData.words && Array.isArray(parsedData.words)) {
+        const insertWord = db.prepare(`
+          INSERT INTO Word (id, tagalog, english, category, exampleSentence, authorId, correctCount, incorrectCount, lastReviewedAt, createdAt, updatedAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        for (const w of parsedData.words) {
+          insertWord.run(w.id, w.tagalog, w.english, w.category, w.exampleSentence, w.authorId, w.correctCount, w.incorrectCount, w.lastReviewedAt, w.createdAt, w.updatedAt);
+        }
+      }
+
+      // Logs restore
+      if (parsedData.logs && Array.isArray(parsedData.logs)) {
+        const insertLog = db.prepare(`
+          INSERT INTO SystemLog (id, action, details, userId, userEmail, createdAt)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        for (const l of parsedData.logs) {
+          insertLog.run(l.id, l.action, l.details, l.userId, l.userEmail, l.createdAt);
+        }
+      }
+
+      // Config restore
+      if (parsedData.config) {
+        const c = parsedData.config;
+        db.prepare(`
+          INSERT INTO SecurityConfig (id, cloudflareToken, updatedAt)
+          VALUES (?, ?, ?)
+        `).run(c.id, c.cloudflareToken, c.updatedAt);
+      }
+    })();
+
+    await createLog("DATABASE_RESTORE", "Neural JSON snapshot successfully decrypted and restored", req.user);
+
+    res.json({ success: true, message: "Database restored successfully." });
+  } catch (error: any) {
+    console.error("Backup restore error:", error);
+    res.status(400).json({ error: "Failed to decrypt or parse snapshot. Make sure this is a valid backup file." });
+  }
+});
+
 // Protective API Routes
 app.get("/api/words", isAuthenticated, async (req: any, res, next) => {
   try {

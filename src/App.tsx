@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Sparkles, Filter, Calendar, BookOpen, LogIn, LogOut, Users, LayoutDashboard, ShieldCheck, Sun, Moon, Gamepad2, Wand2, Volume2, Loader2, Compass, LayoutGrid, CheckCircle2, AlertCircle, ArrowRight, MessageSquare, Activity, HardDrive, Lock, Settings, History, Download, Eye, Terminal, Globe, Shield, RefreshCw, Save, Server, Key, Copy, Info, AlertTriangle, Database } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, Plus, Trash2, Sparkles, Filter, Calendar, BookOpen, LogIn, LogOut, Users, LayoutDashboard, ShieldCheck, Sun, Moon, Gamepad2, Wand2, Volume2, Loader2, Compass, LayoutGrid, CheckCircle2, AlertCircle, ArrowRight, MessageSquare, Activity, HardDrive, Lock, Settings, History, Download, Upload, Eye, Terminal, Globe, Shield, RefreshCw, Save, Server, Key, Copy, Info, AlertTriangle, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import axios from 'axios';
 import { GoogleGenAI } from "@google/genai";
@@ -168,6 +168,87 @@ export const PhilippineSun = ({ size = 24, className = "" }: { size?: number; cl
   </svg>
 );
 
+// Custom helper hook to allow mouse click-and-drag horizontal scroll and vertical-to-horizontal wheel translating.
+function useDragScroll() {
+  const ref = useRef<HTMLDivElement>(null);
+  const isDown = useRef(false);
+  const startX = useRef(0);
+  const scrollLeft = useRef(0);
+  const hasMoved = useRef(false);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    if (!ref.current) return;
+    isDown.current = true;
+    hasMoved.current = false;
+    ref.current.style.cursor = 'grabbing';
+    ref.current.style.userSelect = 'none';
+    startX.current = e.pageX - ref.current.offsetLeft;
+    scrollLeft.current = ref.current.scrollLeft;
+  };
+
+  const onMouseLeave = () => {
+    isDown.current = false;
+    if (ref.current) {
+      ref.current.style.cursor = 'grab';
+      ref.current.style.removeProperty('user-select');
+    }
+  };
+
+  const onMouseUp = () => {
+    isDown.current = false;
+    if (ref.current) {
+      ref.current.style.cursor = 'grab';
+      ref.current.style.removeProperty('user-select');
+    }
+    setTimeout(() => {
+      hasMoved.current = false;
+    }, 0);
+  };
+
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!isDown.current || !ref.current) return;
+    e.preventDefault();
+    const x = e.pageX - ref.current.offsetLeft;
+    const diffX = x - startX.current;
+    if (Math.abs(diffX) > 5) {
+      hasMoved.current = true;
+    }
+    ref.current.scrollLeft = scrollLeft.current - diffX * 1.5;
+  };
+
+  const onWheel = (e: React.WheelEvent) => {
+    if (!ref.current) return;
+    if (e.deltaY !== 0) {
+      e.preventDefault();
+      ref.current.scrollLeft += e.deltaY;
+    }
+  };
+
+  const onClickCapture = (e: React.MouseEvent) => {
+    if (hasMoved.current) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  };
+
+  useEffect(() => {
+    const el = ref.current;
+    if (el) {
+      el.style.cursor = 'grab';
+    }
+  }, []);
+
+  return {
+    ref,
+    onMouseDown,
+    onMouseLeave,
+    onMouseUp,
+    onMouseMove,
+    onWheel,
+    onClickCapture
+  };
+}
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -206,6 +287,8 @@ export default function App() {
   const [isAirportMode, setIsAirportMode] = useState(false);
   const [localAiAvailable, setLocalAiAvailable] = useState(false);
   const [useLocalAi, setUseLocalAi] = useState(false);
+
+  const categoryScroll = useDragScroll();
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -543,6 +626,36 @@ export default function App() {
       triggerSuccess("Secure backup generated and downloaded.");
     } catch (err) {
       triggerError("Failed to generate backup.");
+    }
+  };
+
+  const restoreBackup = async (file: File) => {
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const arrayBuffer = e.target?.result as ArrayBuffer;
+          const uint8Array = new Uint8Array(arrayBuffer);
+          await axios.post('/api/admin/database/restore', uint8Array, {
+            headers: {
+              'Content-Type': 'application/octet-stream'
+            }
+          });
+          triggerSuccess("Database restored successfully! Loading records...");
+          await Promise.all([
+            fetchWords(),
+            fetchUsers(),
+            fetchLogs(),
+            fetchStats()
+          ]);
+        } catch (err: any) {
+          const errMsg = err.response?.data?.error || "Failed to parse restore payload.";
+          triggerError(errMsg);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } catch (err) {
+      triggerError("Failed to initiate restore file reader.");
     }
   };
 
@@ -889,7 +1002,7 @@ export default function App() {
   }).length : 0;
 
   return (
-    <div className="flex h-screen bg-app-bg text-app-text font-sans overflow-hidden transition-colors duration-300">
+    <div className="flex w-full h-screen bg-app-bg text-app-text font-sans overflow-hidden transition-colors duration-300">
       {/* Sidebar Navigation */}
       <aside className="w-64 bg-app-card border-r border-app-border flex flex-col hidden lg:flex">
         <div className="p-6 flex items-center justify-between">
@@ -1068,8 +1181,8 @@ export default function App() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col transition-colors duration-300 lg:pt-0 pt-safe lg:pb-0 overflow-hidden relative">
-        <div className="absolute inset-0 flex flex-col pt-16 pb-32 md:pb-20 overflow-y-auto">
+      <main className="flex-1 w-full flex flex-col transition-colors duration-300 lg:pt-0 pt-safe lg:pb-0 overflow-hidden relative">
+        <div className={`absolute inset-0 w-full flex flex-col pt-16 lg:pt-0 ${(view === 'games' || view === 'study') ? 'pb-[55px] lg:pb-0 overflow-hidden' : 'pb-32 md:pb-20 overflow-y-auto overflow-x-hidden'}`}>
         {view === 'games' ? (
           <Games 
             words={words} 
@@ -1124,7 +1237,7 @@ export default function App() {
              </header>
 
              <div className="flex-1 p-3 md:p-12 bg-app-bg/30">
-               <div className="max-w-4xl mx-auto">
+               <div className="w-full max-w-4xl mx-auto">
                  {!explorerResults.length && !isExplorerLoading ? (
                    <div className="text-center py-20 space-y-6">
                       <div className="w-24 h-24 bg-ph-blue/10 rounded-[2rem] mx-auto flex items-center justify-center">
@@ -1240,9 +1353,39 @@ export default function App() {
         </header>
 
         <div className="p-4 md:p-8 flex-1 flex flex-col">
-          <div className="max-w-6xl mx-auto">
+          <div className="w-full max-w-6xl mx-auto">
             {view === 'dashboard' ? (
-              <div className="space-y-8">
+              <div className="space-y-6 md:space-y-8">
+                {/* Mobile Categories (Hidden on Laptop) */}
+                <div className="lg:hidden animate-in fade-in slide-in-from-top duration-300">
+                  <p className="text-app-muted text-[9px] font-black uppercase tracking-[0.2em] mb-2 px-1">Filter by Category</p>
+                  <div 
+                    ref={categoryScroll.ref}
+                    onMouseDown={categoryScroll.onMouseDown}
+                    onMouseLeave={categoryScroll.onMouseLeave}
+                    onMouseUp={categoryScroll.onMouseUp}
+                    onMouseMove={categoryScroll.onMouseMove}
+                    onWheel={categoryScroll.onWheel}
+                    onClickCapture={categoryScroll.onClickCapture}
+                    className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none snap-x -mx-1 px-1 touch-pan-x select-none"
+                  >
+                    <button 
+                      onClick={() => setSelectedCategory("")}
+                      className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap snap-align-start transition-all ${selectedCategory === "" ? 'bg-ph-blue text-white shadow-md shadow-ph-blue/20' : 'bg-app-card border border-app-border text-app-muted hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                    >
+                      All Words
+                    </button>
+                    {CATEGORIES.map(cat => (
+                      <button 
+                        key={cat}
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap snap-align-start transition-all ${selectedCategory === cat ? 'bg-ph-blue text-white shadow-md shadow-ph-blue/20' : 'bg-app-card border border-app-border text-app-muted hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 {/* Statistics Grid */}
                 <section className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
                   <div className="bg-app-card p-3 md:p-6 rounded-xl md:rounded-3xl border border-app-border shadow-sm relative overflow-hidden group">
@@ -1530,6 +1673,36 @@ export default function App() {
                             Initiate Backup
                           </button>
                         </div>
+
+                        <div className="bg-app-card p-10 rounded-[3rem] border border-app-border shadow-sm flex flex-col md:flex-row items-center justify-between gap-8 group">
+                          <div className="space-y-3 text-center md:text-left">
+                            <div className="flex items-center justify-center md:justify-start gap-3">
+                              <div className="p-3 bg-ph-yellow/10 rounded-2xl">
+                                <Database size={24} className="text-ph-yellow" />
+                              </div>
+                              <h3 className="text-2xl font-black text-app-text">Restore Snapshot</h3>
+                            </div>
+                            <p className="text-ph-yellow/30 font-black uppercase tracking-[0.2em] text-[10px]">AES-256 Secure Decryption</p>
+                            <p className="text-sm text-app-muted leading-relaxed max-w-md">
+                              Upload a previously generated system database backup (<code className="bg-app-bg px-1.5 py-0.5 rounded text-app-text text-xs">.enc</code>) to override the active state with securely recovered records.
+                            </p>
+                          </div>
+                          <label className="bg-ph-yellow text-slate-900 px-8 py-5 rounded-3xl font-black uppercase tracking-[0.2em] text-xs hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-3 cursor-pointer select-none shrink-0">
+                            <Upload size={18} />
+                            Restore Backup
+                            <input 
+                              type="file" 
+                              accept=".enc" 
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  restoreBackup(file);
+                                }
+                              }} 
+                              className="hidden" 
+                            />
+                          </label>
+                        </div>
                       </div>
 
                       <div className="bg-app-card p-10 rounded-[3rem] border border-app-border shadow-sm space-y-8">
@@ -1783,35 +1956,45 @@ export default function App() {
   </main>
 
       {/* Mobile Navigation (Bottom Bar) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-safe-bottom bg-app-card border-t border-app-border z-40 flex items-center justify-around px-2 pb-safe">
+      <nav 
+        className="lg:hidden fixed bottom-0 left-0 right-0 h-[55px] bg-app-card border-t border-app-border z-40 flex items-center justify-around px-2 pb-safe animate-in fade-in slide-in-from-bottom"
+        style={{ height: '55px' }}
+      >
         <button 
           onClick={() => setView('dashboard')}
-          className={`flex flex-col items-center gap-1 p-2 transition-all ${view === 'dashboard' ? 'text-ph-blue scale-110' : 'text-app-muted'}`}
+          className={`flex flex-col items-center gap-1 p-1 sm:p-2 transition-all ${view === 'dashboard' ? 'text-ph-blue scale-110' : 'text-app-muted'}`}
         >
-          <LayoutDashboard size={20} />
-          <span className="text-[10px] font-black uppercase tracking-widest">Bank</span>
+          <LayoutDashboard size={18} />
+          <span className="text-[9px] font-black uppercase tracking-widest">Bank</span>
         </button>
         <button 
           onClick={() => setView('study')}
-          className={`flex flex-col items-center gap-1 p-2 transition-all ${view === 'study' ? 'text-ph-blue scale-110' : 'text-app-muted'}`}
+          className={`flex flex-col items-center gap-1 p-1 sm:p-2 transition-all ${view === 'study' ? 'text-ph-blue scale-110' : 'text-app-muted'}`}
         >
-          <BookOpen size={20} />
-          <span className="text-[10px] font-black uppercase tracking-widest">Study</span>
+          <BookOpen size={18} />
+          <span className="text-[9px] font-black uppercase tracking-widest">Study</span>
         </button>
         <button 
           onClick={() => setView('games')}
-          className={`flex flex-col items-center gap-1 p-2 transition-all ${view === 'games' ? 'text-ph-blue scale-110' : 'text-app-muted'}`}
+          className={`flex flex-col items-center gap-1 p-1 sm:p-2 transition-all ${view === 'games' ? 'text-ph-blue scale-110' : 'text-app-muted'}`}
         >
-          <Gamepad2 size={20} />
-          <span className="text-[10px] font-black uppercase tracking-widest">Play</span>
+          <Gamepad2 size={18} />
+          <span className="text-[9px] font-black uppercase tracking-widest">Play</span>
+        </button>
+        <button 
+          onClick={handleExplorerClick}
+          className={`flex flex-col items-center gap-1 p-1 sm:p-2 transition-all ${view === 'explorer' ? 'text-ph-blue scale-110' : 'text-app-muted'}`}
+        >
+          <Compass size={18} />
+          <span className="text-[9px] font-black uppercase tracking-widest">Explore</span>
         </button>
         {user?.role === 'ADMIN' && (
           <button 
             onClick={() => setView('management')}
-            className={`flex flex-col items-center gap-1 p-2 transition-all ${view === 'management' ? 'text-ph-blue scale-110' : 'text-app-muted'}`}
+            className={`flex flex-col items-center gap-1 p-1 sm:p-2 transition-all ${view === 'management' ? 'text-ph-blue scale-110' : 'text-app-muted'}`}
           >
-            <ShieldCheck size={20} />
-            <span className="text-[10px] font-black uppercase tracking-widest">Admin</span>
+            <ShieldCheck size={18} />
+            <span className="text-[9px] font-black uppercase tracking-widest">Admin</span>
           </button>
         )}
       </nav>
@@ -1857,9 +2040,9 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-md bg-app-card rounded-[3rem] shadow-2xl overflow-hidden border border-app-border"
+              className="relative w-full max-w-md bg-app-card rounded-[3rem] shadow-2xl overflow-y-auto max-h-[90vh] border border-app-border"
             >
-              <div className="p-10">
+              <div className="p-6 md:p-10">
                 <h2 className="text-3xl font-black mb-8 text-app-text">Invite User</h2>
                 <form onSubmit={addUser} className="space-y-6">
                   <div>
@@ -1932,9 +2115,9 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-sm bg-app-card rounded-[2.5rem] shadow-2xl overflow-hidden border border-app-border"
+              className="relative w-full max-w-sm bg-app-card rounded-[2.5rem] shadow-2xl overflow-y-auto max-h-[90vh] border border-app-border"
             >
-              <div className="p-8">
+              <div className="p-6 md:p-8">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-black text-app-text">Settings</h2>
                   <button 
@@ -2043,9 +2226,9 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-md bg-app-card rounded-[3rem] shadow-2xl overflow-hidden border border-app-border"
+              className="relative w-full max-w-md bg-app-card rounded-[3rem] shadow-2xl overflow-y-auto max-h-[90vh] border border-app-border"
             >
-              <div className="p-10">
+              <div className="p-6 md:p-10">
                 <h2 className="text-3xl font-black mb-8 text-app-text">Add New Entry</h2>
                 <form onSubmit={addWord} className="space-y-6">
                   <div>
